@@ -37,6 +37,7 @@ import RelatedProducts from '../components/RelatedProducts';
 import ReviewSection from '../components/ReviewSection';
 import Loading from '../components/Loading';
 import ContactCTA from '../components/ContactCTA';
+import { productService } from '../services/product.service';
 
 const CART_ENABLED = String(process.env.REACT_APP_CART_ENABLED).toLowerCase() === 'true';
 
@@ -55,54 +56,9 @@ const ProductDetail = () => {
     const fetchProduct = async () => {
       dispatch(fetchProductStart());
       try {
-        // In a real app, this would be an API call
-        // For now, we'll use a timeout to simulate a network request
-        setTimeout(() => {
-          // Sample product data for demonstration
-          const sampleProduct = {
-            id: id,
-            name: 'چراغ جلو دنا ایران خودرو',
-            slug: 'iran-khodro-dena-headlight-assembly',
-            brand: 'ایران خودرو',
-            brandSlug: 'irankhodro',
-            price: 2850000,
-            discountPrice: 2650000,
-            discount: 7,
-            rating: 4.6,
-            reviewCount: 42,
-            stockQuantity: 15,
-            sku: 'IK-DN-HL-001',
-            category: 'قطعات بدنه',
-            subcategory: 'چراغ و روشنایی',
-            description: 'چراغ جلو اصلی خودروی دنا با کیفیت بالا و مطابق با استانداردهای شرکت ایران خودرو.',
-            fullDescription: 'چراغ جلو اصلی خودروی دنا با کیفیت بالا و مطابق با استانداردهای شرکت ایران خودرو. این چراغ دارای لنز شیشه‌ای با کیفیت و رفلکتور آلومینیومی است که نور را به خوبی منعکس می‌کند. این محصول با دقت بالا طراحی شده تا دقیقاً با خودروی دنا مطابقت داشته باشد و نصب آن بسیار آسان است. این چراغ با گارانتی یک ساله عرضه می‌شود و در صورت بروز هرگونه مشکل، می‌توانید آن را تعویض نمایید.',
-            images: [
-              '/images/products/dena-headlight-1.jpg',
-              '/images/products/dena-headlight-2.jpg',
-              '/images/products/dena-headlight-3.jpg',
-            ],
-            specifications: [
-              { name: 'برند', value: 'ایران خودرو' },
-              { name: 'مدل خودرو', value: 'دنا' },
-              { name: 'سال تولید', value: '1398-1402' },
-              { name: 'جنس بدنه', value: 'پلاستیک ABS با مقاومت بالا' },
-              { name: 'جنس لنز', value: 'شیشه‌ای' },
-              { name: 'نوع لامپ', value: 'هالوژن' },
-              { name: 'تعداد لامپ', value: '2 عدد' },
-              { name: 'وزن', value: '1.8 کیلوگرم' },
-              { name: 'ابعاد', value: '35 × 25 × 15 سانتی‌متر' },
-              { name: 'گارانتی', value: '12 ماه' },
-            ],
-            compatibleModels: ['دنا', 'دنا پلاس', 'دنا پلاس توربو'],
-            isOriginal: true,
-            installationDifficulty: 'آسان',
-            installationTime: '30 دقیقه',
-            tags: ['چراغ جلو', 'دنا', 'ایران خودرو', 'قطعات بدنه'],
-            relatedProducts: [1, 2, 3, 4],
-          };
-          
-          dispatch(fetchProductSuccess(sampleProduct));
-        }, 500);
+        const response = await productService.getProduct(id);
+        const data = response.data || response;
+        dispatch(fetchProductSuccess(data));
       } catch (error) {
         dispatch(fetchProductFailure(error.message));
       }
