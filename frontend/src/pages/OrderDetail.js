@@ -27,6 +27,7 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import { orderService } from '../services/order.service';
 
 // Status mapping for visualization
 const orderStatusMap = {
@@ -37,43 +38,6 @@ const orderStatusMap = {
   'cancelled': { color: 'error', icon: <CancelIcon />, label: 'لغو شده' },
 };
 
-// Sample order data - in production this would come from an API
-const sampleOrder = {
-  id: '123456',
-  date: '1403/03/15',
-  status: 'processing',
-  paymentMethod: 'کارت بانکی',
-  paymentStatus: 'پرداخت شده',
-  shipping: {
-    address: 'تهران، خیابان ولیعصر، کوچه بهار، پلاک 12، واحد 3',
-    city: 'تهران',
-    postalCode: '1234567890',
-    phone: '09123456789',
-    trackingNumber: 'TRK123456789',
-  },
-  items: [
-    {
-      id: 1,
-      name: 'گارد محافظ گوشی مدل A52',
-      price: 1250000,
-      quantity: 1,
-      image: 'https://via.placeholder.com/80',
-    },
-    {
-      id: 2,
-      name: 'محافظ صفحه نمایش گلس',
-      price: 850000,
-      quantity: 2,
-      image: 'https://via.placeholder.com/80',
-    },
-  ],
-  totals: {
-    subtotal: 2950000,
-    shipping: 350000,
-    discount: 500000,
-    total: 2800000,
-  },
-};
 
 const OrderDetail = () => {
   const { orderId } = useParams();
@@ -83,16 +47,17 @@ const OrderDetail = () => {
   const { isAuthenticated } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    // Simulating API call to fetch order details
-    const fetchOrder = () => {
+    const fetchOrder = async () => {
       setLoading(true);
-      
-      // In production, replace this with an actual API call
-      setTimeout(() => {
-        // Pretend this is data from the API
-        setOrder(sampleOrder);
+      try {
+        const response = await orderService.getOrderDetails(orderId);
+        const data = response.data || response;
+        setOrder(data);
+      } catch (err) {
+        setError(err.message || 'خطا در دریافت جزئیات سفارش');
+      } finally {
         setLoading(false);
-      }, 800);
+      }
     };
 
     if (isAuthenticated && orderId) {
