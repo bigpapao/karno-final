@@ -163,7 +163,8 @@ export const brandService = {
         }
       });
       
-      const url = `http://localhost:5000/api/v1/brands${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+      const url = `${baseUrl}/brands${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
       console.log('Fetching from URL:', url);
       
       const response = await fetch(url, {
@@ -207,7 +208,8 @@ export const brandService = {
     try {
       console.log('Making brand API call with fetch for ID:', id);
       
-      const url = `http://localhost:5000/api/v1/brands/${id}`;
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+      const url = `${baseUrl}/brands/${id}`;
       console.log('Fetching from URL:', url);
       
       const response = await fetch(url, {
