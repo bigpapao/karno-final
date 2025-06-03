@@ -198,7 +198,7 @@ npx webpack-bundle-analyzer build/bundle-stats.json
    - `backend/src/routes/admin/payment-test.routes.js`
 
 2. **Static Test Files:**
-   - `backend/src/public/admin/payment-test.html` (if it exists)
+   - `backend/src/public/admin/payment-test.html` (removed)
 
 3. **Documentation:**
    - Consider merging redundant documentation files
