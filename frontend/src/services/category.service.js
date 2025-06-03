@@ -109,7 +109,7 @@ export const categoryService = {
 
     try {
       console.log('Making categories API call with fetch to avoid redirect loop');
-      
+
       // Build query string from params
       const queryParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
@@ -117,8 +117,9 @@ export const categoryService = {
           queryParams.append(key, value);
         }
       });
-      
-      const url = `http://localhost:5000/api/v1/categories${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+
+      const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+      const url = `${baseUrl}/categories${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
       console.log('Fetching from URL:', url);
       
       const response = await fetch(url, {
