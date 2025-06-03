@@ -1,9 +1,8 @@
 import User from '../models/user.model.js';
 import PhoneVerification from '../models/phoneVerification.model.js';
 import { AppError } from '../middleware/error-handler.middleware.js';
-import smsService from '../services/sms.service.js';
 import { isValidIranianMobile } from '../utils/phoneUtils.js';
-import { sendSmsVerification } from '../utils/sms.js'; // Assuming you have an SMS service
+import { sendSmsVerification } from '../utils/sms.js';
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -226,20 +225,25 @@ export const requestPhoneVerification = async (req, res, next) => {
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
 
-    // try {
-    //   await sendSmsVerification(phoneNumber, `Your verification code is: ${code}`);
-    // } catch (smsError) {
-    //   console.error('SMS sending failed:', smsError);
-    //   // Decide if you want to return an error to the user or proceed without SMS for testing
-    //   // return next(new AppError('Failed to send verification SMS', 500));
-    // }
-
-    res.status(200).json({
+    try {
+      const smsSent = await sendSmsVerification(phoneNumber, code);
+      if (!smsSent && process.env.NODE_ENV === 'production') {
+        return next(new AppError('Failed to send verification SMS', 500));
+      }
+    } catch (smsError) {
+      console.error('SMS sending failed:', smsError);
+      if (process.env.NODE_ENV === 'production') {
+        return next(new AppError('Failed to send verification SMS', 500));
+      }
+    }
+    const response = {
       status: 'success',
       message: 'Verification code sent to your phone number. Please check your messages.',
-      // TEMP: returning code for testing if SMS is not set up
-      verificationCode: code,
-    });
+    };
+    if (process.env.NODE_ENV !== 'production') {
+      response.verificationCode = code;
+    }
+    res.status(200).json(response);
   } catch (error) {
     next(error);
   }
