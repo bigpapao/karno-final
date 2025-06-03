@@ -22,7 +22,6 @@ import {
 import { Link as RouterLink } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import FilterSidebar from '../components/FilterSidebar';
-import SearchBar from '../components/SearchBar';
 
 // Mock data - replace with API calls
 const brandData = {
@@ -340,13 +339,13 @@ const BrandDetail = () => {
   useEffect(() => {
     const brandProducts = products.filter((product) => product.brand === brand.name);
     setBrandSpecificProducts(brandProducts);
-  }, [brandSlug, products]);
+  }, [brandSlug, brand.name]);
 
   useEffect(() => {
-    if (brand && products.length > 0) {
+    if (brand) {
       document.title = `${brand.name} | کارنو`;
     }
-  }, [brand, products]);
+  }, [brand]);
 
   const handleFilterChange = (filterType, value) => {
     setFilters((prev) => ({
@@ -529,11 +528,6 @@ const BrandDetail = () => {
             )}
           </Grid>
         </Grid>
-      </Box>
-
-      {/* Search Bar */}
-      <Box sx={{ mb: 4 }}>
-        <SearchBar />
       </Box>
 
       {/* Tabs and Filter Button */}

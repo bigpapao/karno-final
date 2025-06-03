@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link as RouterLink } from 'react-router-dom';
+import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { useAuthModal } from '../contexts/AuthModalContext';
-import useTracking from '../hooks/useTracking';
 import SEO from '../components/SEO';
 import { generateBreadcrumbSchema, generateProductSchema } from '../utils/structuredData';
 import { fetchProductStart, fetchProductSuccess, fetchProductFailure } from '../store/slices/productSlice';
@@ -22,6 +20,7 @@ import {
   IconButton,
   Paper,
   useTheme,
+  Button,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -29,7 +28,6 @@ import {
   ShoppingCart as CartIcon,
   Favorite as FavoriteIcon,
   FavoriteBorder as FavoriteBorderIcon,
-  Share as ShareIcon,
   Check as CheckIcon,
   LocalShipping as LocalShippingIcon,
   AssignmentReturn as AssignmentReturnIcon,
@@ -38,21 +36,20 @@ import ProductImageGallery from '../components/ProductImageGallery';
 import RelatedProducts from '../components/RelatedProducts';
 import ReviewSection from '../components/ReviewSection';
 import Loading from '../components/Loading';
-import AddToCartButton from '../components/AddToCartButton';
+import ContactCTA from '../components/ContactCTA';
+
+const CART_ENABLED = String(process.env.REACT_APP_CART_ENABLED).toLowerCase() === 'true';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const theme = useTheme();
   const dispatch = useDispatch();
-  const { trackProductView, trackAddToCart } = useTracking();
+  const navigate = useNavigate();
+  const contactRoute = process.env.REACT_APP_CONTACT_ROUTE || '/contact-us';
 
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const { openAuthModal } = useAuthModal();
-
   const { product, loading, error } = useSelector((state) => state.product);
-  const { isAuthenticated } = useSelector((state) => state.auth);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -105,9 +102,6 @@ const ProductDetail = () => {
           };
           
           dispatch(fetchProductSuccess(sampleProduct));
-          
-          // Track product view in Google Analytics after data is loaded
-          trackProductView(sampleProduct.id, sampleProduct.name);
         }, 500);
       } catch (error) {
         dispatch(fetchProductFailure(error.message));
@@ -117,13 +111,6 @@ const ProductDetail = () => {
     window.scrollTo(0, 0);
   }, [dispatch, id]);
 
-  // Track product view when component mounts
-  useEffect(() => {
-    if (product?.id) {
-      trackProductView(product.id, product.name, product.price);
-    }
-  }, [product]);
-
   const handleQuantityChange = (value) => {
     if (value >= 1 && value <= product?.stockQuantity) {
       setQuantity(value);
@@ -132,23 +119,6 @@ const ProductDetail = () => {
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
-  };
-
-  const toggleFavorite = () => {
-    if (isAuthenticated) {
-      setIsFavorite(!isFavorite);
-      // TODO: Implement wishlist functionality
-    }
-  };
-
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: product?.name,
-        text: product?.description,
-        url: window.location.href,
-      });
-    }
   };
 
   if (loading) return <Loading />;
@@ -286,7 +256,7 @@ const ProductDetail = () => {
               height: '100%',
             }}
           >
-            <ProductImageGallery images={product.images} />
+            <ProductImageGallery product={product} />
           </Paper>
         </Grid>
 
@@ -421,9 +391,25 @@ const ProductDetail = () => {
             )}
 
             {/* Description */}
-            <Typography variant="body1" sx={{ mb: 3 }}>
-              {product.description}
-            </Typography>
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="h2" component="h1" gutterBottom>
+                {product.name}
+              </Typography>
+              <Typography variant="body1" color="text.secondary" paragraph>
+                {product.fullDescription || product.description}
+              </Typography>
+              {/* Contact block below description */}
+              <Button
+                fullWidth
+                variant="contained"
+                color="primary"
+                sx={{ mt: 2, borderRadius: 2, transition: 'background 0.2s', fontWeight: 600 }}
+                aria-label="برای خرید کلیک کنید"
+                onClick={() => navigate(contactRoute)}
+              >
+                برای خرید کلیک کنید
+              </Button>
+            </Box>
 
             {/* Quantity Selector */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
@@ -451,21 +437,9 @@ const ProductDetail = () => {
             </Box>
 
             {/* Action Buttons */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-              <AddToCartButton
-                product={product}
-                quantity={quantity}
-                size="large"
-                fullWidth={true}
-                redirectAfterLogin="/"
-              />
-              <IconButton onClick={toggleFavorite} color={isFavorite ? 'primary' : 'default'}>
-                {isFavorite ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-              </IconButton>
-              <IconButton onClick={handleShare}>
-                <ShareIcon />
-              </IconButton>
-            </Box>
+            {!CART_ENABLED && (
+              <ContactCTA showButton buttonLabel="Contact us to purchase" sx={{ mb: 3, width: { xs: '100%', sm: 220, md: 300 }, maxWidth: 300 }} />
+            )}
 
             {/* Product Details */}
             <Paper variant="outlined" sx={{ p: 2 }}>

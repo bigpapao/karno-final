@@ -28,10 +28,10 @@ class SmsService {
       } else if (normalizedPhone.startsWith('0')) {
         normalizedPhone = normalizedPhone.substring(1);
       }
-      
+
       // Add 0 prefix for SMS.ir format
       const recipientNumber = `0${normalizedPhone}`;
-      
+
       // Message template
       const message = `کد تایید کارنو: ${verificationCode}\nاین کد تا ۱۰ دقیقه معتبر است.`;
 
@@ -41,28 +41,28 @@ class SmsService {
         {
           lineNumber: this.lineNumber,
           recipient: recipientNumber,
-          message
+          message,
         },
         {
           headers: {
             'Content-Type': 'application/json',
-            'X-API-KEY': this.apiKey
-          }
-        }
+            'X-API-KEY': this.apiKey,
+          },
+        },
       );
 
       return {
         success: true,
         messageId: response.data.messageId,
-        message: 'OTP code sent successfully'
+        message: 'OTP code sent successfully',
       };
     } catch (error) {
       console.error('SMS service error:', error.response?.data || error.message);
-      
+
       return {
         success: false,
         error: error.response?.data?.message || 'Failed to send verification code',
-        details: error.response?.data || error.message
+        details: error.response?.data || error.message,
       };
     }
   }
@@ -76,14 +76,14 @@ class SmsService {
   async mockSendVerificationCode(phoneNumber, verificationCode) {
     // Log the code to console for testing
     console.log(`[MOCK SMS] Sending code ${verificationCode} to ${phoneNumber}`);
-    
+
     // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
     return {
       success: true,
       messageId: `mock_${Date.now()}`,
-      message: 'Mock OTP code sent successfully'
+      message: 'Mock OTP code sent successfully',
     };
   }
 }
@@ -95,21 +95,20 @@ const smsService = {
     if (smsConfig.mock || !smsConfig.apiKey || smsConfig.apiKey === 'your-api-key') {
       // Log the code to console for testing
       console.log(`[MOCK SMS] Sending code ${verificationCode} to ${phoneNumber}`);
-      
+
       // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       return {
         success: true,
         messageId: `mock_${Date.now()}`,
-        message: 'Mock OTP code sent successfully'
+        message: 'Mock OTP code sent successfully',
       };
-    } else {
-      // Use the real implementation
-      const service = new SmsService();
-      return service.sendVerificationCode(phoneNumber, verificationCode);
     }
-  }
+    // Use the real implementation
+    const service = new SmsService();
+    return service.sendVerificationCode(phoneNumber, verificationCode);
+  },
 };
 
-export default smsService; 
+export default smsService;

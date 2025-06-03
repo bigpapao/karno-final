@@ -13,26 +13,26 @@ class RecommendationCacheService {
       // Set expiration date (24 hours)
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);
-      
+
       // Create or update recommendations
       await Recommendation.findOneAndUpdate(
-        { 
+        {
           userId,
           recommendationType: 'collaborative',
-          sourceProductId
+          sourceProductId,
         },
         {
           userId,
           recommendationType: 'collaborative',
           sourceProductId,
-          products: recommendations.map(rec => ({
+          products: recommendations.map((rec) => ({
             productId: rec.productId,
             score: rec.score,
-            reason: rec.reason || 'Based on your browsing history'
+            reason: rec.reason || 'Based on your browsing history',
           })),
-          expiresAt
+          expiresAt,
         },
-        { upsert: true }
+        { upsert: true },
       );
     } catch (error) {
       // Don't fail if caching fails, just log the error
@@ -52,10 +52,10 @@ class RecommendationCacheService {
         userId,
         recommendationType: 'collaborative',
         sourceProductId,
-        expiresAt: { $gt: new Date() }
+        expiresAt: { $gt: new Date() },
       })
-      .populate('products.productId', 'name price images category brand')
-      .lean();
+        .populate('products.productId', 'name price images category brand')
+        .lean();
 
       return cachedRecommendation?.products || null;
     } catch (error) {
@@ -65,4 +65,4 @@ class RecommendationCacheService {
   }
 }
 
-export default new RecommendationCacheService(); 
+export default new RecommendationCacheService();

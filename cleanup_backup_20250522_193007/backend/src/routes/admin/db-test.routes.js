@@ -16,7 +16,7 @@ const router = express.Router();
 router.get('/status', authenticate, authorize('admin'), async (req, res) => {
   try {
     const status = mongoose.connection.readyState;
-    
+
     // Map readyState to human-readable status
     const statusMap = {
       0: 'disconnected',
@@ -24,17 +24,17 @@ router.get('/status', authenticate, authorize('admin'), async (req, res) => {
       2: 'connecting',
       3: 'disconnecting',
     };
-    
+
     // Get connection stats
-    const poolStats = mongoose.connection.client.topology 
+    const poolStats = mongoose.connection.client.topology
       ? {
-          poolSize: mongoose.connection.client.topology.s.options.maxPoolSize || 'Unknown',
-          minPoolSize: mongoose.connection.client.topology.s.options.minPoolSize || 'Unknown',
-          connectTimeoutMS: mongoose.connection.client.topology.s.options.connectTimeoutMS || 'Unknown',
-          socketTimeoutMS: mongoose.connection.client.topology.s.options.socketTimeoutMS || 'Unknown',
-        }
+        poolSize: mongoose.connection.client.topology.s.options.maxPoolSize || 'Unknown',
+        minPoolSize: mongoose.connection.client.topology.s.options.minPoolSize || 'Unknown',
+        connectTimeoutMS: mongoose.connection.client.topology.s.options.connectTimeoutMS || 'Unknown',
+        socketTimeoutMS: mongoose.connection.client.topology.s.options.socketTimeoutMS || 'Unknown',
+      }
       : { note: 'Connection pool stats not available' };
-      
+
     return res.status(200).json({
       success: true,
       connection: {
@@ -52,7 +52,7 @@ router.get('/status', authenticate, authorize('admin'), async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
-    
+
     return res.status(500).json({
       success: false,
       message: 'Error checking database status',
@@ -79,9 +79,9 @@ router.post('/product', authenticate, authorize('admin'), async (req, res) => {
       stock: 10,
       sku: `SKU-TEST-${Date.now()}`,
     });
-    
+
     await testProduct.save();
-    
+
     return res.status(201).json({
       success: true,
       message: 'Test product created successfully',
@@ -93,7 +93,7 @@ router.post('/product', authenticate, authorize('admin'), async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
-    
+
     return res.status(500).json({
       success: false,
       message: 'Error creating test product',
@@ -111,7 +111,7 @@ router.post('/user', authenticate, authorize('admin'), async (req, res) => {
   try {
     // Generate random timestamp for unique email
     const timestamp = Date.now();
-    
+
     // Create a test user with required fields
     const testUser = new User({
       name: `Test User ${timestamp}`,
@@ -120,9 +120,9 @@ router.post('/user', authenticate, authorize('admin'), async (req, res) => {
       phone: `09${Math.floor(100000000 + Math.random() * 900000000)}`, // Random Iranian format mobile
       role: 'user',
     });
-    
+
     await testUser.save();
-    
+
     return res.status(201).json({
       success: true,
       message: 'Test user created successfully',
@@ -140,7 +140,7 @@ router.post('/user', authenticate, authorize('admin'), async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
-    
+
     return res.status(500).json({
       success: false,
       message: 'Error creating test user',
@@ -167,7 +167,7 @@ router.post('/order', authenticate, authorize('admin'), async (req, res) => {
         role: 'user',
       });
     }
-    
+
     let product = await Product.findOne();
     if (!product) {
       product = await Product.create({
@@ -181,7 +181,7 @@ router.post('/order', authenticate, authorize('admin'), async (req, res) => {
         sku: `SKU-TEST-${Date.now()}`,
       });
     }
-    
+
     // Create test order
     const testOrder = new Order({
       user: user._id,
@@ -211,9 +211,9 @@ router.post('/order', authenticate, authorize('admin'), async (req, res) => {
       totalPrice: product.price + (product.price * 0.09) + 50000,
       status: 'pending',
     });
-    
+
     await testOrder.save();
-    
+
     return res.status(201).json({
       success: true,
       message: 'Test order created successfully',
@@ -225,7 +225,7 @@ router.post('/order', authenticate, authorize('admin'), async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
-    
+
     return res.status(500).json({
       success: false,
       message: 'Error creating test order',
@@ -242,7 +242,7 @@ router.post('/order', authenticate, authorize('admin'), async (req, res) => {
 router.get('/public-status', async (req, res) => {
   try {
     const status = mongoose.connection.readyState;
-    
+
     // Map readyState to human-readable status
     const statusMap = {
       0: 'disconnected',
@@ -250,7 +250,7 @@ router.get('/public-status', async (req, res) => {
       2: 'connecting',
       3: 'disconnecting',
     };
-    
+
     return res.status(200).json({
       success: true,
       connection: {
@@ -284,7 +284,7 @@ router.get('/connection-pool', authenticate, authorize('admin'), async (req, res
     } catch (err) {
       serverStatus = { note: 'Could not retrieve server status. Admin privileges may be required.' };
     }
-    
+
     // Get connection pool info from mongoose
     const poolInfo = {
       maxPoolSize: mongoose.connection.client.topology?.s?.options?.maxPoolSize || 'Unknown',
@@ -292,7 +292,7 @@ router.get('/connection-pool', authenticate, authorize('admin'), async (req, res
       connectTimeoutMS: mongoose.connection.client.topology?.s?.options?.connectTimeoutMS || 'Unknown',
       socketTimeoutMS: mongoose.connection.client.topology?.s?.options?.socketTimeoutMS || 'Unknown',
     };
-    
+
     return res.status(200).json({
       success: true,
       poolInfo,
@@ -305,7 +305,7 @@ router.get('/connection-pool', authenticate, authorize('admin'), async (req, res
       error: error.message,
       stack: error.stack,
     });
-    
+
     return res.status(500).json({
       success: false,
       message: 'Error checking connection pool',
@@ -314,4 +314,4 @@ router.get('/connection-pool', authenticate, authorize('admin'), async (req, res
   }
 });
 
-export default router; 
+export default router;

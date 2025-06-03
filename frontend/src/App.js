@@ -18,7 +18,6 @@ import GoogleAnalytics from './components/GoogleAnalytics';
 import LoadingSpinner from './components/LoadingSpinner';
 import CheckoutGuard from './components/CheckoutGuard';
 
-import Footer from './components/Footer';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Layouts
@@ -27,7 +26,6 @@ import AdminLayout from './layouts/AdminLayout';
 
 // Core pages - immediate loading
 import Home from './pages/Home';
-import PhoneLogin from './pages/PhoneLogin';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ServerError from './pages/errors/ServerError';
@@ -40,6 +38,7 @@ import AdminRoute from './components/AdminRoute';
 // Lazy-loaded pages for better performance
 const Products = lazy(() => import('./pages/Products'));
 const ProductDetail = lazy(() => import('./pages/ProductDetail'));
+const SearchResults = lazy(() => import('./pages/SearchResults'));
 const Brands = lazy(() => import('./pages/Brands'));
 const BrandDetail = lazy(() => import('./pages/BrandDetail'));
 const Models = lazy(() => import('./pages/Models'));
@@ -52,6 +51,7 @@ const EditProfile = lazy(() => import('./pages/EditProfile'));
 const Orders = lazy(() => import('./pages/Orders'));
 const OrderDetail = lazy(() => import('./pages/OrderDetail'));
 const Addresses = lazy(() => import('./pages/Addresses'));
+const ContactUs = lazy(() => import('./pages/ContactUs'));
 
 // Lazy-loaded admin pages
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -93,7 +93,6 @@ function App() {
                       <Route index element={<Home />} />
                       <Route path="login" element={<Login />} />
                       <Route path="register" element={<Register />} />
-                      <Route path="phone-login" element={<PhoneLogin />} />
                       <Route path="forgot-password" element={<Navigate to="/login" replace />} />
                       <Route path="reset-password/:token" element={<Navigate to="/login" replace />} />
                       <Route path="verify-email/:token" element={<Navigate to="/login" replace />} />
@@ -107,6 +106,11 @@ function App() {
                       <Route path="products/:id" element={
                         <Suspense fallback={<LoadingSpinner />}>
                           <ProductDetail />
+                        </Suspense>
+                      } />
+                      <Route path="search" element={
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <SearchResults />
                         </Suspense>
                       } />
                       <Route path="brands" element={
@@ -132,6 +136,11 @@ function App() {
                       <Route path="contact" element={
                         <Suspense fallback={<LoadingSpinner />}>
                           <Contact />
+                        </Suspense>
+                      } />
+                      <Route path="contact-us" element={
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <ContactUs />
                         </Suspense>
                       } />
                       <Route path="cart" element={
@@ -227,7 +236,6 @@ function App() {
                       } />
                     </Route>
                   </Routes>
-                  <Footer />
                   </AppInitializer>
                 </AuthModalProvider>
               </CartProvider>

@@ -13,10 +13,10 @@ class UserProfileService {
     return Event.find({
       userId,
       timestamp: { $gte: startDate },
-      productId: { $exists: true, $ne: null }
+      productId: { $exists: true, $ne: null },
     })
-    .sort({ timestamp: -1 })
-    .lean();
+      .sort({ timestamp: -1 })
+      .lean();
   }
 
   /**
@@ -28,18 +28,18 @@ class UserProfileService {
       productScores: {},
       viewedProducts: new Set(),
       inCartProducts: new Set(),
-      purchasedProducts: new Set()
+      purchasedProducts: new Set(),
     };
-    
+
     // Process each event
-    events.forEach(event => {
+    events.forEach((event) => {
       const productId = event.productId.toString();
-      
+
       // Initialize if not exists
       if (!profile.productScores[productId]) {
         profile.productScores[productId] = 0;
       }
-      
+
       // Add score based on event type
       switch (event.eventType) {
         case 'view':
@@ -59,7 +59,7 @@ class UserProfileService {
           break;
       }
     });
-    
+
     return profile;
   }
 
@@ -77,4 +77,4 @@ class UserProfileService {
   }
 }
 
-export default new UserProfileService(); 
+export default new UserProfileService();

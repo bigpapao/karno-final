@@ -7,6 +7,7 @@ import * as adminDashboardController from '../controllers/dashboard.controller.j
 import performanceRoutes from './admin/performance.routes.js';
 import securityRoutes from './admin/security.routes.js';
 import paymentTestRoutes from './admin/payment-test.routes.js';
+
 const router = express.Router();
 // Apply auth middleware to all admin routes
 router.use(authenticate);
@@ -41,4 +42,4 @@ router.put('/orders/:id/tracking', adminOrderController.updateOrderTracking);
 // Dashboard routes
 router.get('/dashboard/stats', adminDashboardController.getDashboardStats);
 
-export default router; 
+export default router;

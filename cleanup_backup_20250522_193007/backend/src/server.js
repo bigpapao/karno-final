@@ -25,18 +25,18 @@ import { createAllIndexes } from './utils/database-indexes.js';
 import { securityMiddleware } from './middleware/security.middleware.js';
 import { csrfProtection, csrfExclude, setCSRFToken } from './middleware/csrf.middleware.js';
 import { securityMonitorMiddleware, securityMonitorAPI } from './middleware/security-monitor.middleware.js';
-import { 
-  standardLimiter, 
-  authLimiter, 
+import {
+  standardLimiter,
+  authLimiter,
   apiLimiter,
   searchLimiter,
-  sensitiveRoutesLimiter
+  sensitiveRoutesLimiter,
 } from './middleware/rateLimit.middleware.js';
 
 // Import recommendation monitoring middleware
-import { 
-  trackRecommendationMetrics, 
-  anonymizeUserData 
+import {
+  trackRecommendationMetrics,
+  anonymizeUserData,
 } from './middleware/recommendation-monitoring.middleware.js';
 
 // Import models to ensure they're registered
@@ -66,7 +66,7 @@ const port = process.env.PORT || 5001;
 try {
   await connectDB();
   logger.info('MongoDB connected successfully');
-  
+
   // Create database indexes (if not already present)
   if (process.env.CREATE_INDEXES_ON_STARTUP !== 'false') {
     try {
@@ -80,7 +80,7 @@ try {
       logger.error({
         message: 'Error initializing database indexes',
         error: indexError.message,
-        stack: indexError.stack
+        stack: indexError.stack,
       });
       // Continue without indexes - they can be created later with the script
     }
@@ -89,7 +89,7 @@ try {
   logger.error({
     message: 'Failed to connect to MongoDB',
     error: error.message,
-    stack: error.stack
+    stack: error.stack,
   });
   // Continue running the server even if database connection fails
   // This allows us to test the security features without a database
@@ -178,11 +178,11 @@ app.use(cookieParser());
 
 // Apply CSRF protection with excluded paths
 app.use(csrfExclude([
-  '/api/auth/login',        // Login route
-  '/api/auth/register',     // Registration route
+  '/api/auth/login', // Login route
+  '/api/auth/register', // Registration route
   '/api/auth/google-login', // OAuth routes
-  '/api/payments/webhook',  // Payment webhooks
-  /\/api\/public\/.*/,      // Public API routes (regex)
+  '/api/payments/webhook', // Payment webhooks
+  /\/api\/public\/.*/, // Public API routes (regex)
 ]));
 
 // Set CSRF token for all GET requests
@@ -217,7 +217,7 @@ const recommendationRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minute window
   max: 100, // Limit to 100 requests per window
   standardHeaders: true,
-  message: 'Too many recommendation requests, please try again later'
+  message: 'Too many recommendation requests, please try again later',
 });
 
 app.use('/api/recommendations', recommendationRateLimiter, recommendationRoutes);
@@ -295,7 +295,7 @@ process.on('uncaughtException', (err) => {
   logger.error({
     message: 'UNCAUGHT EXCEPTION! 💥 Shutting down...',
     error: err.message,
-    stack: err.stack
+    stack: err.stack,
   });
   console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
   console.error(err);
@@ -307,7 +307,7 @@ process.on('unhandledRejection', (err) => {
   logger.error({
     message: 'UNHANDLED REJECTION! 💥 Shutting down...',
     error: err.message,
-    stack: err.stack
+    stack: err.stack,
   });
   console.error('UNHANDLED REJECTION! 💥 Shutting down...');
   console.error(err);

@@ -1,6 +1,6 @@
 /**
  * Email Templates with RTL Support for Persian Text
- * 
+ *
  * This module provides reusable email templates with proper RTL support
  * for Persian text. All templates include UTF-8 encoding, RTL direction,
  * and responsive design for better email client compatibility.
@@ -12,8 +12,7 @@
  * @param {string} content - Email content (HTML)
  * @returns {string} Complete HTML email template
  */
-export const baseEmailTemplate = (title, content) => {
-  return `
+export const baseEmailTemplate = (title, content) => `
     <!DOCTYPE html>
     <html lang="fa" dir="rtl">
     <head>
@@ -127,7 +126,6 @@ export const baseEmailTemplate = (title, content) => {
     </body>
     </html>
   `;
-};
 
 /**
  * Email verification template
@@ -171,10 +169,12 @@ export const passwordResetTemplate = (resetUrl) => {
  * @returns {string} HTML email template for order confirmation
  */
 export const orderConfirmationTemplate = (order) => {
-  const { orderNumber, items, totalPrice, shippingAddress } = order;
-  
+  const {
+    orderNumber, items, totalPrice, shippingAddress,
+  } = order;
+
   let itemsHtml = '';
-  items.forEach(item => {
+  items.forEach((item) => {
     itemsHtml += `
       <tr>
         <td style="padding: 8px; border-bottom: 1px solid #eeeeee;">${item.name}</td>
@@ -220,7 +220,7 @@ export const orderConfirmationTemplate = (order) => {
     
     <p>اطلاعات بیشتر در مورد سفارش خود را می‌توانید در حساب کاربری خود مشاهده کنید.</p>
   `;
-  
+
   return baseEmailTemplate('تأیید سفارش', content);
 };
 
@@ -231,7 +231,7 @@ export const orderConfirmationTemplate = (order) => {
  */
 export const shippingNotificationTemplate = (shipment) => {
   const { orderNumber, trackingNumber, estimatedDelivery } = shipment;
-  
+
   const content = `
     <p>سلام،</p>
     <p>سفارش شما ارسال شده است!</p>
@@ -247,7 +247,7 @@ export const shippingNotificationTemplate = (shipment) => {
     
     <p>با تشکر از خرید شما!</p>
   `;
-  
+
   return baseEmailTemplate('سفارش شما ارسال شد', content);
 };
 
@@ -275,6 +275,6 @@ export const welcomeTemplate = (userName) => {
     
     <p>اگر سوالی دارید، کافیست با پشتیبانی ما تماس بگیرید.</p>
   `;
-  
+
   return baseEmailTemplate('به کارنو خوش آمدید!', content);
-}; 
+};

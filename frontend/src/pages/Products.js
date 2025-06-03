@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import SEO from '../components/SEO';
-import { generateBreadcrumbSchema, generateProductSchema } from '../utils/structuredData';
+import { generateBreadcrumbSchema } from '../utils/structuredData';
+import { productService } from '../services/product.service';
+import CarSelector from '../components/CarSelector';
 import {
   Box,
   Container,
@@ -10,18 +11,14 @@ import {
   Grid,
   useTheme,
   useMediaQuery,
-  IconButton,
-  Drawer,
   Alert,
   Snackbar,
   Button,
-  Divider,
   Paper,
   Tabs,
   Tab,
   Chip,
 } from '@mui/material';
-import FilterListIcon from '@mui/icons-material/FilterList';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import BuildIcon from '@mui/icons-material/Build';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
@@ -232,7 +229,6 @@ const Products = () => {
   const breadcrumbSchema = generateBreadcrumbSchema(breadcrumbItems);
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeBrand, setActiveBrand] = useState(null);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState('all');
   const [filters, setFilters] = useState({
     category: [],
@@ -252,7 +248,11 @@ const Products = () => {
     const uniqueCategories = new Set();
     products.forEach(product => {
       if (product.category) {
-        uniqueCategories.add(product.category);
+        // Handle both object and string formats
+        const categoryName = product.category?.name || product.category;
+        if (categoryName) {
+          uniqueCategories.add(categoryName);
+        }
       }
     });
     return Array.from(uniqueCategories);
@@ -263,7 +263,11 @@ const Products = () => {
     const uniqueBrands = new Set();
     products.forEach(product => {
       if (product.brand) {
-        uniqueBrands.add(product.brand);
+        // Handle both object and string formats
+        const brandName = product.brand?.name || product.brand;
+        if (brandName) {
+          uniqueBrands.add(brandName);
+        }
       }
     });
     return Array.from(uniqueBrands);
@@ -297,10 +301,6 @@ const Products = () => {
   // Alias for handleClearFilters for the FilterSidebar component
   const handleReset = () => handleClearFilters();
 
-  const handleCategoryChange = (category) => {
-    setActiveCategory(category);
-  };
-
   // Filter products based on active filters
   useEffect(() => {
     if (!products || products.length === 0) return;
@@ -309,12 +309,18 @@ const Products = () => {
 
     // Filter by category
     if (activeCategory !== 'all') {
-      result = result.filter(product => product.category === activeCategory);
+      result = result.filter(product => {
+        const categoryName = product.category?.name || product.category;
+        return categoryName === activeCategory;
+      });
     }
 
     // Filter by brand
     if (filters.brand) {
-      result = result.filter(product => product.brand === filters.brand);
+      result = result.filter(product => {
+        const brandName = product.brand?.name || product.brand;
+        return brandName === filters.brand;
+      });
     }
 
     // Filter by price range
@@ -341,6 +347,11 @@ const Products = () => {
     setFilteredProducts(result);
   }, [products, activeCategory, filters]);
 
+  // Sync currentTab with activeCategory for filtering
+  useEffect(() => {
+    setActiveCategory(currentTab);
+  }, [currentTab]);
+
   // Test component lifecycle
   useEffect(() => {
     console.log('Products component mounted');
@@ -349,89 +360,28 @@ const Products = () => {
     };
   }, []);
 
-  // Mock data loading
+  // Load products from API
   useEffect(() => {
-    setLoading(true);
-    console.log('Starting to load mock products data');
-    // Simulate API call
-    setTimeout(() => {
-      // Mock products data
-      const mockProducts = [
-        {
-          id: 1,
-          name: 'روغن موتور سینتیوم 5W-40',
-          slug: 'synthetic-engine-oil-5w40',
-          price: 850000,
-          discountPrice: 750000,
-          rating: 4.5,
-          reviewCount: 128,
-          image: '/images/products/engine-oil.jpg',
-          category: 'Oil',
-          brand: 'Shell',
-          inStock: true,
-          model: 'Pride',
-        },
-        {
-          id: 2,
-          name: 'روغن موتور مینرال 10W-40',
-          slug: 'mineral-engine-oil-10w40',
-          price: 650000,
-          discountPrice: 550000,
-          rating: 4.2,
-          reviewCount: 56,
-          image: '/images/products/engine-oil.jpg',
-          category: 'Oil',
-          brand: 'Total',
-          inStock: true,
-          model: 'Pride',
-        },
-        {
-          id: 3,
-          name: 'باتری خودرو 60Ah',
-          slug: 'car-battery-60ah',
-          price: 1200000,
-          discountPrice: 1000000,
-          rating: 4.8,
-          reviewCount: 32,
-          image: '/images/products/battery.jpg',
-          category: 'Battery',
-          brand: 'Varta',
-          inStock: true,
-          model: 'Pride',
-        },
-        {
-          id: 4,
-          name: 'فیلتر هوا خودرو',
-          slug: 'car-air-filter',
-          price: 250000,
-          discountPrice: 200000,
-          rating: 4.1,
-          reviewCount: 24,
-          image: '/images/products/air-filter.jpg',
-          category: 'Oil',
-          brand: 'Mann',
-          inStock: true,
-          model: 'Pride',
-        },
-        {
-          id: 5,
-          name: 'روغن گیربکس 80W-90',
-          slug: 'gearbox-oil-80w90',
-          price: 450000,
-          discountPrice: 350000,
-          rating: 4.3,
-          reviewCount: 18,
-          image: '/images/products/gearbox-oil.jpg',
-          category: 'Oil',
-          brand: 'Castrol',
-          inStock: true,
-          model: 'Pride',
-        },
-      ];
+    const loadProducts = async () => {
+      setLoading(true);
+      console.log('Starting to load products from API');
+      try {
+        const response = await productService.getProducts({
+          page: 1,
+          limit: 50, // Load more products for the public page
+        });
+        console.log('Products loaded:', response);
+        setProducts(response.products || []);
+      } catch (error) {
+        console.error('Error loading products:', error);
+        // Fallback to empty array if API fails
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      setProducts(mockProducts);
-      setLoading(false);
-    }, 2000);
+    loadProducts();
   }, []);
 
   return (
@@ -549,6 +499,9 @@ const Products = () => {
           </Paper>
         )}
         
+        {/* Car Selector Component */}
+        <CarSelector variant="compact" />
+        
         {/* Categories Tabs */}
         <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
           <Grid container spacing={3} alignItems="center">
@@ -557,7 +510,8 @@ const Products = () => {
                 <Typography variant="h6" sx={{ mr: 2 }}>
                   دسته‌بندی محصولات:
                 </Typography>
-                {isMobile && (
+                {/* Mobile filter button temporarily disabled */}
+                {/* {isMobile && (
                   <IconButton
                     onClick={() => setFilterOpen(true)}
                     sx={{ ml: 'auto' }}
@@ -566,7 +520,7 @@ const Products = () => {
                   >
                     <FilterListIcon />
                   </IconButton>
-                )}
+                )} */}
               </Box>
             </Grid>
             <Grid item xs={12} md={6}>

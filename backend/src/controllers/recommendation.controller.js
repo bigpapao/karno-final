@@ -2,7 +2,7 @@ import eventService from '../services/recommendation/event.service.js';
 import collaborativeFilterService from '../services/recommendation/collaborative-filter.service.js';
 import contentBasedFilterService from '../services/recommendation/content-based-filter.service.js';
 import hybridRecommendationService from '../services/recommendation/hybrid.service.js';
-import { asyncHandler } from '../utils/async-handler.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/api-error.js';
 import { ApiResponse } from '../utils/api-response.js';
 
@@ -10,20 +10,20 @@ import { ApiResponse } from '../utils/api-response.js';
  * Helper for parsing common recommendation query parameters
  */
 const parseRecommendationParams = (query) => {
-  const { 
-    limit = 10, 
-    excludeViewed, 
-    excludeInCart, 
+  const {
+    limit = 10,
+    excludeViewed,
+    excludeInCart,
     excludePurchased,
-    categories 
+    categories,
   } = query;
-  
+
   return {
     limit: parseInt(limit),
     excludeViewed: excludeViewed === 'true',
     excludeInCart: excludeInCart === 'true',
     excludePurchased: excludePurchased === 'true',
-    categories: categories ? categories.split(',') : []
+    categories: categories ? categories.split(',') : [],
   };
 };
 
@@ -42,17 +42,19 @@ const verifyUserAuth = (req) => {
  * Track a user event manually
  */
 export const trackEvent = asyncHandler(async (req, res) => {
-  const { eventType, productId, searchQuery, categoryId, metadata } = req.body;
-  
+  const {
+    eventType, productId, searchQuery, categoryId, metadata,
+  } = req.body;
+
   if (!eventType) {
     throw new ApiError(400, 'Event type is required');
   }
-  
+
   // Verify user is authenticated
   if (!req.user || !req.user._id) {
     throw new ApiError(401, 'Authentication required to track events');
   }
-  
+
   const eventData = {
     userId: req.user._id,
     eventType,
@@ -61,13 +63,13 @@ export const trackEvent = asyncHandler(async (req, res) => {
     categoryId,
     sessionId: req.cookies?.sessionId || req.sessionID,
     referrer: req.get('Referrer'),
-    metadata: metadata || {}
+    metadata: metadata || {},
   };
-  
+
   const event = await eventService.trackEvent(eventData);
-  
+
   return res.status(201).json(
-    new ApiResponse(201, event, 'Event tracked successfully')
+    new ApiResponse(201, event, 'Event tracked successfully'),
   );
 });
 
@@ -76,20 +78,22 @@ export const trackEvent = asyncHandler(async (req, res) => {
  */
 export const getUserEvents = asyncHandler(async (req, res) => {
   const userId = req.user._id;
-  const { eventType, startDate, endDate, limit, page } = req.query;
-  
+  const {
+    eventType, startDate, endDate, limit, page,
+  } = req.query;
+
   const options = {
     eventType,
     startDate,
     endDate,
     limit: parseInt(limit) || 100,
-    skip: (parseInt(page) - 1) * (parseInt(limit) || 100) || 0
+    skip: (parseInt(page) - 1) * (parseInt(limit) || 100) || 0,
   };
-  
+
   const events = await eventService.getUserEvents(userId, options);
-  
+
   return res.status(200).json(
-    new ApiResponse(200, events, 'User events retrieved successfully')
+    new ApiResponse(200, events, 'User events retrieved successfully'),
   );
 });
 
@@ -97,25 +101,27 @@ export const getUserEvents = asyncHandler(async (req, res) => {
  * Get event analytics and counts
  */
 export const getEventAnalytics = asyncHandler(async (req, res) => {
-  const { userId, productId, eventType, startDate, endDate } = req.query;
-  
+  const {
+    userId, productId, eventType, startDate, endDate,
+  } = req.query;
+
   // Make sure user has admin permission
   if (!req.user?.role || req.user.role !== 'admin') {
     throw new ApiError(403, 'Admin permission required to access analytics');
   }
-  
+
   const filter = {
     userId,
     productId,
     eventType,
     startDate,
-    endDate
+    endDate,
   };
-  
+
   const counts = await eventService.getEventCounts(filter);
-  
+
   return res.status(200).json(
-    new ApiResponse(200, counts, 'Event analytics retrieved successfully')
+    new ApiResponse(200, counts, 'Event analytics retrieved successfully'),
   );
 });
 
@@ -125,9 +131,9 @@ export const getEventAnalytics = asyncHandler(async (req, res) => {
 const detectCacheHit = (req, response) => {
   // Check if the response came from cache
   // Services usually have a cache flag in the data or a timestamp within the last few seconds
-  if (response && 
-      (response._fromCache || 
-      (response.createdAt && new Date() - new Date(response.createdAt) < 100))
+  if (response
+      && (response._fromCache
+      || (response.createdAt && new Date() - new Date(response.createdAt) < 100))
   ) {
     req.cacheHit = true;
   }
@@ -141,12 +147,12 @@ const detectCacheHit = (req, response) => {
 export const getPersonalRecommendations = asyncHandler(async (req, res) => {
   const userId = verifyUserAuth(req);
   const options = parseRecommendationParams(req.query);
-  
+
   const recommendations = await collaborativeFilterService.generateRecommendations(userId, options);
   detectCacheHit(req, recommendations);
-  
+
   return res.status(200).json(
-    new ApiResponse(200, recommendations, 'Personalized recommendations generated successfully')
+    new ApiResponse(200, recommendations, 'Personalized recommendations generated successfully'),
   );
 });
 
@@ -156,12 +162,12 @@ export const getPersonalRecommendations = asyncHandler(async (req, res) => {
 export const getContentBasedRecommendations = asyncHandler(async (req, res) => {
   const userId = verifyUserAuth(req);
   const options = parseRecommendationParams(req.query);
-  
+
   const recommendations = await contentBasedFilterService.generateRecommendations(userId, options);
   detectCacheHit(req, recommendations);
-  
+
   return res.status(200).json(
-    new ApiResponse(200, recommendations, 'Content-based recommendations generated successfully')
+    new ApiResponse(200, recommendations, 'Content-based recommendations generated successfully'),
   );
 });
 
@@ -171,27 +177,27 @@ export const getContentBasedRecommendations = asyncHandler(async (req, res) => {
 export const getHybridRecommendations = asyncHandler(async (req, res) => {
   const userId = verifyUserAuth(req);
   const options = parseRecommendationParams(req.query);
-  
+
   // Add weights if provided
   const { collaborativeWeight, contentBasedWeight } = req.query;
-  
+
   if (collaborativeWeight && contentBasedWeight) {
     const collabWeight = parseFloat(collaborativeWeight);
     const contentWeight = parseFloat(contentBasedWeight);
     const sum = collabWeight + contentWeight;
-    
+
     // Normalize weights to add up to 1
     options.weights = {
       collaborative: collabWeight / sum,
-      contentBased: contentWeight / sum
+      contentBased: contentWeight / sum,
     };
   }
-  
+
   const recommendations = await hybridRecommendationService.generateRecommendations(userId, options);
   detectCacheHit(req, recommendations);
-  
+
   return res.status(200).json(
-    new ApiResponse(200, recommendations, 'Hybrid recommendations generated successfully')
+    new ApiResponse(200, recommendations, 'Hybrid recommendations generated successfully'),
   );
 });
 
@@ -200,19 +206,19 @@ export const getHybridRecommendations = asyncHandler(async (req, res) => {
  */
 export const getCategoryRecommendations = asyncHandler(async (req, res) => {
   const { categories, limit = 10 } = req.query;
-  
+
   if (!categories) {
     throw new ApiError(400, 'At least one category ID is required');
   }
-  
+
   const categoryIds = categories.split(',');
   const recommendations = await contentBasedFilterService.getCategoryBasedRecommendations(
     categoryIds,
-    parseInt(limit)
+    parseInt(limit),
   );
-  
+
   return res.status(200).json(
-    new ApiResponse(200, recommendations, 'Category recommendations retrieved successfully')
+    new ApiResponse(200, recommendations, 'Category recommendations retrieved successfully'),
   );
 });
 
@@ -221,14 +227,14 @@ export const getCategoryRecommendations = asyncHandler(async (req, res) => {
  */
 export const getPopularProducts = asyncHandler(async (req, res) => {
   const { limit = 10, days = 30 } = req.query;
-  
+
   const popularProducts = await collaborativeFilterService.getPopularProducts(
     parseInt(limit),
-    parseInt(days)
+    parseInt(days),
   );
-  
+
   return res.status(200).json(
-    new ApiResponse(200, popularProducts, 'Popular products retrieved successfully')
+    new ApiResponse(200, popularProducts, 'Popular products retrieved successfully'),
   );
 });
 
@@ -248,14 +254,14 @@ const verifyProductId = (productId) => {
 export const getSimilarProducts = asyncHandler(async (req, res) => {
   const productId = verifyProductId(req.params.productId);
   const { limit = 5 } = req.query;
-  
+
   const similarProducts = await collaborativeFilterService.getSimilarProducts(
     productId,
-    parseInt(limit)
+    parseInt(limit),
   );
-  
+
   return res.status(200).json(
-    new ApiResponse(200, similarProducts, 'Similar products retrieved successfully')
+    new ApiResponse(200, similarProducts, 'Similar products retrieved successfully'),
   );
 });
 
@@ -265,14 +271,14 @@ export const getSimilarProducts = asyncHandler(async (req, res) => {
 export const getContentSimilarProducts = asyncHandler(async (req, res) => {
   const productId = verifyProductId(req.params.productId);
   const { limit = 5 } = req.query;
-  
+
   const similarProducts = await contentBasedFilterService.getSimilarProducts(
     productId,
-    parseInt(limit)
+    parseInt(limit),
   );
-  
+
   return res.status(200).json(
-    new ApiResponse(200, similarProducts, 'Content-based similar products retrieved successfully')
+    new ApiResponse(200, similarProducts, 'Content-based similar products retrieved successfully'),
   );
 });
 
@@ -282,14 +288,14 @@ export const getContentSimilarProducts = asyncHandler(async (req, res) => {
 export const getHybridSimilarProducts = asyncHandler(async (req, res) => {
   const productId = verifyProductId(req.params.productId);
   const { limit = 5 } = req.query;
-  
+
   const similarProducts = await hybridRecommendationService.getSimilarProducts(
     productId,
-    parseInt(limit)
+    parseInt(limit),
   );
-  
+
   return res.status(200).json(
-    new ApiResponse(200, similarProducts, 'Hybrid similar products retrieved successfully')
+    new ApiResponse(200, similarProducts, 'Hybrid similar products retrieved successfully'),
   );
 });
 
@@ -304,5 +310,5 @@ export default {
   getPopularProducts,
   getSimilarProducts,
   getContentSimilarProducts,
-  getHybridSimilarProducts
-}; 
+  getHybridSimilarProducts,
+};

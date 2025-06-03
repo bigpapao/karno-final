@@ -174,21 +174,25 @@ export const getProfileStatus = createAsyncThunk(
 // Cart sync thunk for merging guest cart with user cart
 export const syncGuestCart = createAsyncThunk(
   'auth/syncGuestCart',
-  async (_, { rejectWithValue }) => {
+  async (guestCartItems = null, { rejectWithValue }) => {
     try {
-      // Get guest cart from localStorage
-      const guestCart = localStorage.getItem('cart');
-      if (!guestCart) {
-        return null; // No guest cart to sync
+      // Use provided guest cart items or get from localStorage
+      let cartItems = guestCartItems;
+      
+      if (!cartItems) {
+        const guestCart = localStorage.getItem('cart');
+        if (!guestCart) {
+          return null; // No guest cart to sync
+        }
+        cartItems = JSON.parse(guestCart);
       }
 
-      const guestCartItems = JSON.parse(guestCart);
-      if (!Array.isArray(guestCartItems) || guestCartItems.length === 0) {
+      if (!Array.isArray(cartItems) || cartItems.length === 0) {
         return null; // Empty cart
       }
 
       // Send guest cart to backend for merging
-      const response = await cartService.syncCart(guestCartItems);
+      const response = await cartService.syncCart(cartItems);
       
       // Clear guest cart from localStorage after successful sync
       localStorage.removeItem('cart');
@@ -315,7 +319,7 @@ const authSlice = createSlice({
       })
       .addCase(verifyPhone.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload.data.user;
+        state.user = action.payload.data?.user || action.payload.user;
         state.isAuthenticated = true;
         state.authChecked = true;
         // Token is handled via HTTP-only cookies
@@ -342,7 +346,7 @@ const authSlice = createSlice({
       })
       .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload.user;
+        state.user = action.payload.data?.user || action.payload.user;
         state.isAuthenticated = true;
         state.authChecked = true;
         state.successMessage = 'ورود موفقیت‌آمیز';
@@ -407,8 +411,11 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(checkAuth.fulfilled, (state, action) => {
+        // Backend returns: { status: 'success', data: user }
+        const userData = action.payload.data || action.payload.user || action.payload;
+        
         state.profileLoading = false;
-        state.user = action.payload.user || action.payload.data?.user;
+        state.user = userData;
         state.isAuthenticated = true;
         state.authChecked = true;
       })
@@ -417,11 +424,7 @@ const authSlice = createSlice({
         state.authChecked = true;
         state.isAuthenticated = false;
         state.user = null;
-        // Don't set error for normal "not authenticated" case
-        const error = action.payload;
-        if (error && !error.notAuthenticated) {
-          state.error = typeof error === 'string' ? error : 'خطا در بررسی وضعیت احراز هویت';
-        }
+        // Don't set error for checkAuth rejection - it's expected when not logged in
       });
 
     // Get Profile
@@ -431,12 +434,16 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(getProfile.fulfilled, (state, action) => {
+        // Backend returns: { status: 'success', data: user }
+        const userData = action.payload.data || action.payload.user || action.payload;
+        
         state.profileLoading = false;
-        state.user = action.payload.user || action.payload.data?.user;
+        state.user = userData;
         state.isAuthenticated = true;
         state.authChecked = true;
       })
       .addCase(getProfile.rejected, (state, action) => {
+        console.log('GetProfile rejected - Error:', action.payload);
         state.profileLoading = false;
         state.authChecked = true;
         const error = action.payload;
@@ -464,9 +471,9 @@ const authSlice = createSlice({
         state.successMessage = null;
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
-        state.loading = false;
-        state.successMessage = 'اطلاعات پروفایل با موفقیت به‌روزرسانی شد';
-        state.user = action.payload.data.user;
+        state.profileLoading = false;
+        state.user = action.payload.data?.user || action.payload.user;
+        state.successMessage = action.payload.message || 'پروفایل با موفقیت به‌روزرسانی شد';
       })
       .addCase(updateProfile.rejected, (state, action) => {
         state.loading = false;
@@ -503,7 +510,8 @@ const authSlice = createSlice({
       })
       .addCase(getProfileStatus.fulfilled, (state, action) => {
         state.profileStatusLoading = false;
-        state.profileStatus = action.payload.data;
+        state.profileStatus = action.payload.data || action.payload;
+        state.user = action.payload.data?.user || action.payload.user || state.user;
       })
       .addCase(getProfileStatus.rejected, (state, action) => {
         state.profileStatusLoading = false;

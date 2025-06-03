@@ -9,7 +9,7 @@ if (process.env.NODE_ENV === 'development') {
       collection: collectionName,
       method,
       query,
-      doc
+      doc,
     });
   });
 }
@@ -19,10 +19,10 @@ const SLOW_QUERY_THRESHOLD = 100; // milliseconds
 
 mongoose.set('debug', (collectionName, method, query, doc, options) => {
   const start = Date.now();
-  
+
   return () => {
     const duration = Date.now() - start;
-    
+
     if (duration > SLOW_QUERY_THRESHOLD) {
       logger.warn({
         message: 'Slow MongoDB Query',
@@ -30,7 +30,7 @@ mongoose.set('debug', (collectionName, method, query, doc, options) => {
         method,
         query,
         duration,
-        threshold: SLOW_QUERY_THRESHOLD
+        threshold: SLOW_QUERY_THRESHOLD,
       });
     }
   };
@@ -38,14 +38,14 @@ mongoose.set('debug', (collectionName, method, query, doc, options) => {
 
 // Monitor connection pool
 const monitorConnectionPool = () => {
-  const connection = mongoose.connection;
-  
+  const { connection } = mongoose;
+
   connection.on('connected', () => {
     logger.info({
       message: 'MongoDB Connected',
       host: connection.host,
       port: connection.port,
-      name: connection.name
+      name: connection.name,
     });
   });
 
@@ -57,7 +57,7 @@ const monitorConnectionPool = () => {
     logger.error({
       message: 'MongoDB Connection Error',
       error: err.message,
-      stack: err.stack
+      stack: err.stack,
     });
   });
 
@@ -71,7 +71,7 @@ const monitorConnectionPool = () => {
           totalConnections: poolStats.totalConnectionCount,
           availableConnections: poolStats.availableConnectionCount,
           pendingConnections: poolStats.pendingConnectionCount,
-          maxPoolSize: poolStats.maxPoolSize
+          maxPoolSize: poolStats.maxPoolSize,
         });
       }
     } catch (error) {
@@ -86,5 +86,5 @@ export const startMonitoring = () => {
 };
 
 export default {
-  startMonitoring
-}; 
+  startMonitoring,
+};

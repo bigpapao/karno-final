@@ -220,7 +220,9 @@ export const requestPhoneVerification = async (req, res, next) => {
 
     await PhoneVerification.findOneAndUpdate(
       { phone: phoneNumber },
-      { phone: phoneNumber, code, expiresAt, attempts: 0, verified: false },
+      {
+        phone: phoneNumber, code, expiresAt, attempts: 0, verified: false,
+      },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
 
@@ -238,7 +240,6 @@ export const requestPhoneVerification = async (req, res, next) => {
       // TEMP: returning code for testing if SMS is not set up
       verificationCode: code,
     });
-
   } catch (error) {
     next(error);
   }
@@ -254,14 +255,14 @@ export const verifyPhoneVerification = async (req, res, next) => {
     // Find the user who is trying to verify
     const user = await User.findById(userId);
     if (!user) {
-        return next(new AppError('User not found', 404));
+      return next(new AppError('User not found', 404));
     }
 
-    // The phone number to verify should be the one from the request that initiated OTP, 
+    // The phone number to verify should be the one from the request that initiated OTP,
     // or you might need to store it temporarily or get it from user profile if they already set it.
     // For this example, let's assume the user has a `tempPhoneNumber` field or we get it from the verification document itself.
     // This part highly depends on your exact flow: is the user setting a new phone or verifying an existing one?
-    
+
     // For simplicity, let's find the verification document by the code first.
     // In a real app, you'd likely find it by phone number that was used to request the code.
     // This needs to be more robust.
@@ -271,7 +272,7 @@ export const verifyPhoneVerification = async (req, res, next) => {
     // Let's assume the user already has a `phone` field they are trying to verify or have just updated.
     const phoneNumberToVerify = user.phone; // Or from req.body if they are verifying a new number not yet saved
     if (!phoneNumberToVerify) {
-        return next(new AppError('No phone number found for verification. Please set a phone number first or provide it.', 400));
+      return next(new AppError('No phone number found for verification. Please set a phone number first or provide it.', 400));
     }
 
     const verificationDoc = await PhoneVerification.findOne({ phone: phoneNumberToVerify });
@@ -313,9 +314,9 @@ export const verifyPhoneVerification = async (req, res, next) => {
     // If the phone number in verificationDoc is different from user.phone, update it.
     // This would be the case if they are verifying a *new* phone number.
     if (user.phone !== verificationDoc.phone) {
-        user.phone = verificationDoc.phone;
+      user.phone = verificationDoc.phone;
     }
-    await user.save({validateBeforeSave: false});
+    await user.save({ validateBeforeSave: false });
 
     // Optionally, delete the verification document after successful verification
     await PhoneVerification.deleteOne({ _id: verificationDoc._id });
@@ -329,7 +330,6 @@ export const verifyPhoneVerification = async (req, res, next) => {
         phoneVerified: user.phoneVerified,
       },
     });
-
   } catch (error) {
     next(error);
   }

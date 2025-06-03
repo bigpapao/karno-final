@@ -1,4 +1,4 @@
-import { asyncHandler } from '../utils/async-handler.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiError } from '../utils/api-error.js';
 import { ApiResponse } from '../utils/api-response.js';
 import recommendationMonitoring from '../utils/recommendation-monitoring.js';
@@ -12,11 +12,11 @@ export const getMetrics = asyncHandler(async (req, res) => {
   if (!req.user?.role || req.user.role !== 'admin') {
     throw new ApiError(403, 'Admin permission required to access metrics');
   }
-  
+
   const metrics = recommendationMonitoring.getMetrics();
-  
+
   return res.status(200).json(
-    new ApiResponse(200, metrics, 'Recommendation system metrics retrieved successfully')
+    new ApiResponse(200, metrics, 'Recommendation system metrics retrieved successfully'),
   );
 });
 
@@ -29,15 +29,15 @@ export const getModelFreshness = asyncHandler(async (req, res) => {
   if (!req.user?.role || req.user.role !== 'admin') {
     throw new ApiError(403, 'Admin permission required to access model freshness data');
   }
-  
+
   const metrics = recommendationMonitoring.getMetrics();
   const freshnessData = {
     modelFreshness: metrics.modelFreshness,
-    modelAge: metrics.modelAge
+    modelAge: metrics.modelAge,
   };
-  
+
   return res.status(200).json(
-    new ApiResponse(200, freshnessData, 'Model freshness data retrieved successfully')
+    new ApiResponse(200, freshnessData, 'Model freshness data retrieved successfully'),
   );
 });
 
@@ -50,19 +50,19 @@ export const getApiPerformance = asyncHandler(async (req, res) => {
   if (!req.user?.role || req.user.role !== 'admin') {
     throw new ApiError(403, 'Admin permission required to access API performance data');
   }
-  
+
   const metrics = recommendationMonitoring.getMetrics();
-  
+
   const performanceData = {
     apiCalls: metrics.apiCalls,
     latency: metrics.latency,
     cacheHitRate: metrics.cacheHitRate,
     cacheHits: metrics.cacheHits,
-    cacheMisses: metrics.cacheMisses
+    cacheMisses: metrics.cacheMisses,
   };
-  
+
   return res.status(200).json(
-    new ApiResponse(200, performanceData, 'API performance data retrieved successfully')
+    new ApiResponse(200, performanceData, 'API performance data retrieved successfully'),
   );
 });
 
@@ -75,12 +75,12 @@ export const triggerDataDriftCheck = asyncHandler(async (req, res) => {
   if (!req.user?.role || req.user.role !== 'admin') {
     throw new ApiError(403, 'Admin permission required to trigger data drift check');
   }
-  
+
   await recommendationMonitoring.checkForDataDrift();
   const driftStatus = recommendationMonitoring.metrics.dataDrift;
-  
+
   return res.status(200).json(
-    new ApiResponse(200, driftStatus, 'Data drift check triggered successfully')
+    new ApiResponse(200, driftStatus, 'Data drift check triggered successfully'),
   );
 });
 
@@ -93,17 +93,17 @@ export const updateModelFreshness = asyncHandler(async (req, res) => {
   if (!req.user?.role || req.user.role !== 'admin') {
     throw new ApiError(403, 'Admin permission required to update model freshness');
   }
-  
+
   const { modelType } = req.body;
-  
+
   if (!modelType || !['collaborative', 'contentBased', 'hybrid'].includes(modelType)) {
     throw new ApiError(400, 'Valid model type required (collaborative, contentBased, or hybrid)');
   }
-  
+
   recommendationMonitoring.updateModelFreshness(modelType);
-  
+
   return res.status(200).json(
-    new ApiResponse(200, { modelType, updatedAt: new Date() }, 'Model freshness updated successfully')
+    new ApiResponse(200, { modelType, updatedAt: new Date() }, 'Model freshness updated successfully'),
   );
 });
 
@@ -112,5 +112,5 @@ export default {
   getModelFreshness,
   getApiPerformance,
   triggerDataDriftCheck,
-  updateModelFreshness
-}; 
+  updateModelFreshness,
+};

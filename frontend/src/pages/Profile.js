@@ -1,399 +1,399 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { getProfile, updateProfile } from '../store/slices/authSlice';
-import { isValidIranianMobile } from '../utils/phoneUtils';
-import OTPVerificationModal from '../components/OTPVerificationModal';
-import ProfileCompletionBanner from '../components/ProfileCompletionBanner';
+import React, { useEffect, useReducer, useState, useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import {
+  getProfile,
+  updateProfile,
+  requestPhoneVerification,
+  verifyPhone
+} from "../store/slices/authSlice";
+import { isValidIranianMobile, normalizePhoneNumber } from "../utils/phoneUtils";
+
+// -----------------------------------------------------------------------------
+// Form reducer ‑ keeps all profile fields in a single object so we avoid dozens
+//   of useState calls and can update any field with a single action.
+// -----------------------------------------------------------------------------
+const FORM_RESET = {
+  firstName: "",
+  lastName: "",
+  phone: "",
+  email: "",
+  address: "",
+  city: "",
+  province: "",
+  postalCode: ""
+};
+
+function formReducer(state, { type, field, value, payload }) {
+  switch (type) {
+    case "SET_FIELD":
+      return { ...state, [field]: value };
+    case "BULK_SET": // when we load user profile from API
+      return { ...state, ...payload };
+    case "RESET":
+      return { ...FORM_RESET };
+    default:
+      return state;
+  }
+}
+
+const initialErrors = {};
 
 const Profile = () => {
+  // ---------------------------------------------------------------------------
+  // Redux / routing glue
+  // ---------------------------------------------------------------------------
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user, error, successMessage, authChecked } = useSelector((state) => state.auth);
-  
-  // State for profile form
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    address: '',
-    city: '',
-    province: '',
-    postalCode: '',
-  });
-  
-  // State for OTP modal
-  const [showOTPModal, setShowOTPModal] = useState(false);
-  
-  // State for form errors
-  const [formErrors, setFormErrors] = useState({});
-  
-  // State for form submission
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // State for profile status
-  const [profileStatus, setProfileStatus] = useState({
-    isProfileComplete: false,
-    isMobileVerified: false,
-    missingFields: []
-  });
-  
-  // Load user profile data
+  const { user, isAuthenticated, authChecked, successMessage, error } = useSelector(
+    (s) => s.auth
+  );
+
+  // ---------------------------------------------------------------------------
+  // Local state ‑ forms, OTP, misc flags
+  // ---------------------------------------------------------------------------
+  const [formData, dispatchForm] = useReducer(formReducer, FORM_RESET);
+  const [errors, setErrors] = useState(initialErrors);
+  const [isSubmitting, setSubmitting] = useState(false);
+
+  // OTP section
+  const [otpStep, setOtpStep] = useState("idle"); // idle | sent | verifying
+  const [otpCode, setOtpCode] = useState("");
+  const [otpCountdown, setOtpCountdown] = useState(0); // seconds
+
+  // ---------------------------------------------------------------------------
+  // Side‑effects
+  // ---------------------------------------------------------------------------
+  // Load profile once auth is ready
   useEffect(() => {
-    if (user) {
-      setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        phone: user.phone || '',
-        email: user.email || '',
-        address: user.address || '',
-        city: user.city || '',
-        province: user.province || '',
-        postalCode: user.postalCode || '',
-      });
-      
-      // Check profile completion
-      setProfileStatus({
-        isProfileComplete: user.isProfileComplete || false,
-        isMobileVerified: user.mobileVerified || false,
-        missingFields: []
-      });
-    } else {
+    if (authChecked && isAuthenticated && !user) {
       dispatch(getProfile());
     }
-  }, [user, dispatch]);
-  
-  // Redirect to home if not authenticated
+  }, [authChecked, isAuthenticated, user, dispatch]);
+
+  // Prefill form when user data arrives
   useEffect(() => {
-    if (authChecked && !user) {
-      navigate('/', { replace: true });
+    if (user)
+      dispatchForm({ type: "BULK_SET", payload: {
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        phone: user.phone || "",
+        email: user.email || "",
+        address: user.address || "",
+        city: user.city || "",
+        province: user.province || "",
+        postalCode: user.postalCode || ""
+      }});
+  }, [user]);
+
+  // Redirect if user is not authenticated but auth check finished
+  useEffect(() => {
+    if (authChecked && !isAuthenticated) {
+      navigate("/", { replace: true });
     }
-  }, [authChecked, user, navigate]);
-  
-  // Handle input changes
-  const handleChange = (e) => {
+  }, [authChecked, isAuthenticated, navigate]);
+
+  // Handle OTP countdown timer
+  useEffect(() => {
+    if (otpCountdown <= 0) return;
+    const t = setTimeout(() => setOtpCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpCountdown]);
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+  const setField = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-    
-    // Clear field error when typing
-    if (formErrors[name]) {
-      setFormErrors({
-        ...formErrors,
-        [name]: ''
-      });
-    }
+    dispatchForm({ type: "SET_FIELD", field: name, value });
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
-  
-  // Validate form before submission
-  const validateForm = () => {
-    const errors = {};
-    
-    // Required fields
-    if (!formData.firstName.trim()) errors.firstName = 'نام الزامی است';
-    if (!formData.lastName.trim()) errors.lastName = 'نام خانوادگی الزامی است';
-    if (!formData.address.trim()) errors.address = 'آدرس الزامی است';
-    if (!formData.city.trim()) errors.city = 'شهر الزامی است';
-    if (!formData.province.trim()) errors.province = 'استان الزامی است';
-    if (!formData.postalCode.trim()) errors.postalCode = 'کد پستی الزامی است';
-    
-    // Phone validation
-    if (!formData.phone) {
-      errors.phone = 'شماره موبایل الزامی است';
-    } else if (!isValidIranianMobile(formData.phone)) {
-      errors.phone = 'فرمت شماره موبایل نامعتبر است';
-    }
-    
-    // Postal code validation (10 digits)
-    if (formData.postalCode && !/^\d{10}$/.test(formData.postalCode)) {
-      errors.postalCode = 'کد پستی باید ۱۰ رقم باشد';
-    }
-    
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+
+  const validateProfile = () => {
+    const e = {};
+    if (!formData.firstName.trim()) e.firstName = "نام الزامی است";
+    if (!formData.lastName.trim()) e.lastName = "نام خانوادگی الزامی است";
+    if (!formData.address.trim()) e.address = "آدرس الزامی است";
+    if (!formData.city.trim()) e.city = "شهر الزامی است";
+    if (!formData.province.trim()) e.province = "استان الزامی است";
+    if (!formData.postalCode.trim()) e.postalCode = "کد پستی الزامی است";
+
+    if (!formData.phone) e.phone = "شماره موبایل الزامی است";
+    else if (!isValidIranianMobile(formData.phone)) e.phone = "فرمت شماره موبایل نامعتبر است";
+    if (formData.postalCode && !/^\d{10}$/.test(formData.postalCode))
+      e.postalCode = "کد پستی باید ۱۰ رقم باشد";
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
-  
-  // Handle form submission
-  const handleSubmit = async (e) => {
+
+  // ---------------------------------------------------------------------------
+  // Submit handlers
+  // ---------------------------------------------------------------------------
+  const onProfileSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
+    if (isSubmitting) return;
+    if (!validateProfile()) return;
+
+    setSubmitting(true);
     try {
       await dispatch(updateProfile(formData)).unwrap();
-      setIsSubmitting(false);
     } catch (err) {
-      console.error('Update profile error:', err);
-      setIsSubmitting(false);
+      console.error(err);
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  // Send OTP to phone
+  const sendOtp = async () => {
+    const apiKey = process.env.REACT_APP_SMS_API_KEY;
+    if (!isSubmitting) {
+      // API call with apiKey
+      setSubmitting(true);
+      try {
+        // Request with SMS.ir API key
+        const response = await fetch(`https://sms.ir/api/otp/send?apiKey=${apiKey}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            phone: normalizePhoneNumber(formData.phone),
+            // other parameters
+          }),
+        });
   
-  // Handle verify phone click
-  const handleVerifyPhone = () => {
-    setShowOTPModal(true);
+        const data = await response.json();
+        if (data.success) {
+          setOtpStep("sent");
+          setOtpCountdown(120);
+        } else {
+          setErrors((p) => ({ ...p, phone: "OTP sending failed" }));
+        }
+      } catch (err) {
+        console.error(err);
+        setErrors((p) => ({ ...p, phone: err.message || "OTP request failed" }));
+      } finally {
+        setSubmitting(false);
+      }
+    }
   };
-  
-  // Close OTP modal
-  const handleCloseOTPModal = () => {
-    setShowOTPModal(false);
+
+  // Verify OTP
+  const verifyOtp = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    if (otpCode.length !== 6) return setErrors((p) => ({ ...p, otp: "کد ۶ رقم است" }));
+
+    setSubmitting(true);
+    try {
+      await dispatch(
+        verifyPhone({ phone: normalizePhoneNumber(formData.phone), code: otpCode })
+      ).unwrap();
+      setOtpStep("verified");
+    } catch (err) {
+      setErrors((p) => ({ ...p, otp: err.message || "کد نادرست است" }));
+    } finally {
+      setSubmitting(false);
+    }
   };
-  
-  // Handle successful verification
-  const handleVerificationSuccess = () => {
-    setShowOTPModal(false);
-    // Update profile status
-    setProfileStatus(prevStatus => ({
-      ...prevStatus,
-      isMobileVerified: true
-    }));
-  };
-  
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">حساب کاربری من</h1>
-      
-      {/* Profile completion banner */}
-      {(!profileStatus.isProfileComplete || !profileStatus.isMobileVerified) && (
-        <ProfileCompletionBanner 
-          isProfileComplete={profileStatus.isProfileComplete}
-          isMobileVerified={profileStatus.isMobileVerified}
-        />
-      )}
-      
-      {/* Success message */}
-      {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-          <span className="block sm:inline">{successMessage}</span>
-        </div>
-      )}
-      
-      {/* Error message */}
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-          <span className="block sm:inline">{error}</span>
-        </div>
-      )}
-      
-      {/* Profile form */}
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Personal information */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">اطلاعات شخصی</h2>
-              
-              <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                  نام <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="firstName"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md ${
-                    formErrors.firstName ? 'border-red-500' : 'border-gray-300'
-                  } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-                />
-                {formErrors.firstName && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.firstName}</p>
-                )}
-              </div>
-              
-              <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                  نام خانوادگی <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="lastName"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md ${
-                    formErrors.lastName ? 'border-red-500' : 'border-gray-300'
-                  } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-                />
-                {formErrors.lastName && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.lastName}</p>
-                )}
-              </div>
-              
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                  شماره موبایل <span className="text-red-500">*</span>
-                </label>
-                <div className="flex">
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className={`mt-1 block w-full rounded-md ${
-                      formErrors.phone ? 'border-red-500' : 'border-gray-300'
-                    } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-                    dir="ltr"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleVerifyPhone}
-                    className="mr-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    disabled={
-                      !formData.phone || 
-                      !isValidIranianMobile(formData.phone) || 
-                      profileStatus.isMobileVerified
-                    }
-                  >
-                    {profileStatus.isMobileVerified ? 'تایید شده' : 'تایید شماره'}
-                  </button>
-                </div>
-                {formErrors.phone && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
-                )}
-                {profileStatus.isMobileVerified && (
-                  <p className="mt-1 text-sm text-green-600">شماره موبایل تایید شده است</p>
-                )}
-              </div>
-              
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  ایمیل (اختیاری)
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email || ''}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  dir="ltr"
-                />
-              </div>
-            </div>
-            
-            {/* Address information */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">آدرس</h2>
-              
-              <div>
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                  آدرس <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="address"
-                  name="address"
-                  rows={3}
-                  value={formData.address}
-                  onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md ${
-                    formErrors.address ? 'border-red-500' : 'border-gray-300'
-                  } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-                />
-                {formErrors.address && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.address}</p>
-                )}
-              </div>
-              
-              <div>
-                <label htmlFor="city" className="block text-sm font-medium text-gray-700">
-                  شهر <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="city"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md ${
-                    formErrors.city ? 'border-red-500' : 'border-gray-300'
-                  } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-                />
-                {formErrors.city && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.city}</p>
-                )}
-              </div>
-              
-              <div>
-                <label htmlFor="province" className="block text-sm font-medium text-gray-700">
-                  استان <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="province"
-                  name="province"
-                  value={formData.province}
-                  onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md ${
-                    formErrors.province ? 'border-red-500' : 'border-gray-300'
-                  } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-                />
-                {formErrors.province && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.province}</p>
-                )}
-              </div>
-              
-              <div>
-                <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700">
-                  کد پستی <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="postalCode"
-                  name="postalCode"
-                  value={formData.postalCode}
-                  onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md ${
-                    formErrors.postalCode ? 'border-red-500' : 'border-gray-300'
-                  } shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-                  dir="ltr"
-                />
-                {formErrors.postalCode && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.postalCode}</p>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-6">
+
+  // ---------------------------------------------------------------------------
+  // Render helpers
+  // ---------------------------------------------------------------------------
+  const renderOtpSection = () => {
+    if (otpStep === "verified" || user?.mobileVerified) {
+      return <p className="text-green-600 text-sm mt-1">شماره موبایل تایید شده است ✔</p>;
+    }
+
+    return (
+      <>
+        {otpStep === "idle" && (
+          <button
+            type="button"
+            onClick={sendOtp}
+            disabled={isSubmitting}
+            className="ml-2 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm disabled:opacity-60"
+          >
+            دریافت کد تایید
+          </button>
+        )}
+
+        {otpStep === "sent" && (
+          <form onSubmit={verifyOtp} className="flex items-center space-x-2 mt-2" dir="ltr">
+            <input
+              type="text"
+              maxLength={6}
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D+/g, ""))}
+              className="border rounded-md p-2 w-24 text-center"
+              placeholder="------"
+            />
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
+              className="px-3 py-2 bg-green-600 text-white rounded-md text-sm disabled:opacity-60"
             >
-              {isSubmitting ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  در حال ذخیره...
-                </>
-              ) : (
-                'ذخیره اطلاعات'
-              )}
+              تایید
             </button>
+            <button
+              type="button"
+              disabled={otpCountdown > 0 || isSubmitting}
+              onClick={sendOtp}
+              className="text-xs text-indigo-600 disabled:opacity-40"
+            >
+              {otpCountdown > 0 ? `ارسال مجدد (${otpCountdown})` : "ارسال مجدد"}
+            </button>
+            {errors.otp && <span className="text-red-600 text-xs">{errors.otp}</span>}
+          </form>
+        )}
+      </>
+    );
+  };
+
+  // ---------------------------------------------------------------------------
+  // JSX
+  // ---------------------------------------------------------------------------
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">پروفایل کاربری</h1>
+
+      {successMessage && (
+        <div className="mb-4 p-4 rounded bg-green-100 border border-green-400 text-green-700">
+          {successMessage}
+        </div>
+      )}
+      {error && (
+        <div className="mb-4 p-4 rounded bg-red-100 border border-red-400 text-red-700">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={onProfileSubmit} className="bg-white p-6 rounded shadow-md space-y-6">
+        {/* Personal info */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              نام <span className="text-red-500">*</span>
+            </label>
+            <input
+              name="firstName"
+              value={formData.firstName}
+              onChange={setField}
+              className={`w-full rounded-md border p-2 ${errors.firstName ? "border-red-500" : "border-gray-300"}`}
+            />
+            {errors.firstName && <p className="text-red-600 text-xs mt-1">{errors.firstName}</p>}
           </div>
-        </form>
-      </div>
-      
-      {/* OTP verification modal */}
-      <OTPVerificationModal
-        show={showOTPModal}
-        onClose={handleCloseOTPModal}
-        phone={formData.phone}
-        onSuccess={handleVerificationSuccess}
-      />
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              نام خانوادگی <span className="text-red-500">*</span>
+            </label>
+            <input
+              name="lastName"
+              value={formData.lastName}
+              onChange={setField}
+              className={`w-full rounded-md border p-2 ${errors.lastName ? "border-red-500" : "border-gray-300"}`}
+            />
+            {errors.lastName && <p className="text-red-600 text-xs mt-1">{errors.lastName}</p>}
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-1">
+              شماره موبایل <span className="text-red-500">*</span>
+            </label>
+            <div className="flex items-center">
+              <input
+                name="phone"
+                value={formData.phone}
+                onChange={setField}
+                className={`flex-grow rounded-md border p-2 ${errors.phone ? "border-red-500" : "border-gray-300"}`}
+                dir="ltr"
+              />
+              {renderOtpSection()}
+            </div>
+            {errors.phone && <p className="text-red-600 text-xs mt-1">{errors.phone}</p>}
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-1">ایمیل (اختیاری)</label>
+            <input
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={setField}
+              className="w-full rounded-md border p-2 border-gray-300"
+              dir="ltr"
+            />
+          </div>
+        </section>
+
+        {/* Address */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-1">
+              آدرس <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              name="address"
+              rows={3}
+              value={formData.address}
+              onChange={setField}
+              className={`w-full rounded-md border p-2 ${errors.address ? "border-red-500" : "border-gray-300"}`}
+            />
+            {errors.address && <p className="text-red-600 text-xs mt-1">{errors.address}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              شهر <span className="text-red-500">*</span>
+            </label>
+            <input
+              name="city"
+              value={formData.city}
+              onChange={setField}
+              className={`w-full rounded-md border p-2 ${errors.city ? "border-red-500" : "border-gray-300"}`}
+            />
+            {errors.city && <p className="text-red-600 text-xs mt-1">{errors.city}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              استان <span className="text-red-500">*</span>
+            </label>
+            <input
+              name="province"
+              value={formData.province}
+              onChange={setField}
+              className={`w-full rounded-md border p-2 ${errors.province ? "border-red-500" : "border-gray-300"}`}
+            />
+            {errors.province && <p className="text-red-600 text-xs mt-1">{errors.province}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              کد پستی <span className="text-red-500">*</span>
+            </label>
+            <input
+              name="postalCode"
+              value={formData.postalCode}
+              onChange={setField}
+              className={`w-full rounded-md border p-2 ${errors.postalCode ? "border-red-500" : "border-gray-300"}`}
+              dir="ltr"
+            />
+            {errors.postalCode && <p className="text-red-600 text-xs mt-1">{errors.postalCode}</p>}
+          </div>
+        </section>
+
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full py-2 bg-indigo-600 text-white rounded-md disabled:opacity-60"
+        >
+          {isSubmitting ? "در حال ذخیره…" : "ذخیره اطلاعات"}
+        </button>
+      </form>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import express from 'express';
-import { 
-  trackEvent, 
-  getUserEvents, 
+import {
+  trackEvent,
+  getUserEvents,
   getEventAnalytics,
   getPersonalRecommendations,
   getContentBasedRecommendations,
@@ -10,7 +10,7 @@ import {
   getPopularProducts,
   getSimilarProducts,
   getContentSimilarProducts,
-  getHybridSimilarProducts
+  getHybridSimilarProducts,
 } from '../controllers/recommendation.controller.js';
 import { authenticate, authorize } from '../middleware/auth.middleware.js';
 
@@ -31,4 +31,4 @@ router.get('/similar/:productId', getSimilarProducts);
 router.get('/similar-content/:productId', getContentSimilarProducts);
 router.get('/similar-hybrid/:productId', getHybridSimilarProducts);
 
-export default router; 
+export default router;

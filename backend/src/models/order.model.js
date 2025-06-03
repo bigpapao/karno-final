@@ -33,7 +33,7 @@ const shippingAddressSchema = new mongoose.Schema({
     required: [true, 'Full name is required'],
   },
   firstName: String, // For backward compatibility
-  lastName: String,  // For backward compatibility
+  lastName: String, // For backward compatibility
   phoneNumber: {
     type: String,
     required: [true, 'Phone number is required'],
@@ -57,10 +57,10 @@ const shippingAddressSchema = new mongoose.Schema({
     type: String,
     required: [true, 'City is required'],
   },
-  state: String,        // New field
-  province: String,     // Old field (for backward compatibility)
-  postalCode: String,   // Old field
-  zipCode: String,      // New field
+  state: String, // New field
+  province: String, // Old field (for backward compatibility)
+  postalCode: String, // Old field
+  zipCode: String, // New field
   country: {
     type: String,
     default: 'IR',
@@ -178,10 +178,10 @@ const orderSchema = new mongoose.Schema(
 );
 
 // Pre-save hook to set estimated delivery date based on shipping option
-orderSchema.pre('save', function(next) {
+orderSchema.pre('save', function (next) {
   if (this.isNew || this.isModified('shippingOption')) {
     const today = new Date();
-    
+
     switch (this.shippingOption) {
       case 'same_day':
         // Same day (if ordered before 12 PM)
@@ -202,7 +202,7 @@ orderSchema.pre('save', function(next) {
         break;
     }
   }
-  
+
   next();
 });
 

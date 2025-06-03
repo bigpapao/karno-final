@@ -55,13 +55,11 @@ export const useRTLGridProps = (props = {}, reverseInRTL = true) => {
  * Get CSS grid template areas for RTL layouts
  * 
  * @param {string[][]} ltrAreaTemplate - LTR grid template areas
+ * @param {string} direction - 'rtl' or 'ltr'
  * @returns {string[][]} - RTL adjusted grid template areas
  */
-export const getRTLGridTemplateAreas = (ltrAreaTemplate) => {
-  const { direction } = useDirection();
-  
+export const getRTLGridTemplateAreas = (ltrAreaTemplate, direction) => {
   if (direction !== 'rtl') return ltrAreaTemplate;
-  
   // Reverse each row for RTL
   return ltrAreaTemplate.map(row => [...row].reverse());
 };
@@ -70,15 +68,13 @@ export const getRTLGridTemplateAreas = (ltrAreaTemplate) => {
  * Get flexbox direction based on current direction
  * 
  * @param {string} ltrDirection - Flexbox direction in LTR mode ('row', 'column', etc.)
+ * @param {string} direction - 'rtl' or 'ltr'
  * @returns {string} - The appropriate flexbox direction
  */
-export const getFlexDirection = (ltrDirection = 'row') => {
-  const { direction } = useDirection();
+export const getFlexDirection = (ltrDirection = 'row', direction) => {
   const isRTL = direction === 'rtl';
-  
   // If not in RTL or not row-based, return original
   if (!isRTL || !ltrDirection.includes('row')) return ltrDirection;
-  
   // Handle row directions for RTL
   switch (ltrDirection) {
     case 'row':
@@ -106,7 +102,7 @@ export const useRTLFlexProps = (props = {}) => {
   
   // Adjust flex direction if needed
   if (props.flexDirection && props.flexDirection.includes('row')) {
-    rtlProps.flexDirection = getFlexDirection(props.flexDirection);
+    rtlProps.flexDirection = getFlexDirection(props.flexDirection, direction);
   }
   
   // Adjust justifyContent if needed

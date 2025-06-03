@@ -11,10 +11,10 @@ import {
   getOrderStats,
   bulkUpdateOrderStatus,
   getOrderByTracking,
-  verifyGuestOrder
+  verifyGuestOrder,
 } from '../controllers/order.controller.js';
 import { validateRequest, schemas } from '../middleware/validation.middleware.js';
-import { asyncHandler } from '../middleware/errorHandler.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 import { verifyToken, isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();

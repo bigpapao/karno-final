@@ -8,7 +8,7 @@ const redisClient = new Redis({
   retryStrategy: (times) => {
     const delay = Math.min(times * 50, 2000);
     return delay;
-  }
+  },
 });
 
 // Cache TTLs in seconds
@@ -42,4 +42,4 @@ redisClient.on('connect', () => {
 });
 
 export { redisClient, CACHE_TTL, CACHE_KEYS };
-export default { redisClient, CACHE_TTL, CACHE_KEYS }; 
+export default { redisClient, CACHE_TTL, CACHE_KEYS };

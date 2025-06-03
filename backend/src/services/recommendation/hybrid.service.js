@@ -7,13 +7,13 @@ import { logger } from '../../utils/logger.js';
 
 /**
  * Hybrid Recommendation Service
- * Combines collaborative filtering and content-based recommendations 
+ * Combines collaborative filtering and content-based recommendations
  * using a weighted ensemble approach
  */
 class HybridRecommendationService {
   /**
    * Generate hybrid recommendations for a user
-   * 
+   *
    * @param {string} userId - User ID to generate recommendations for
    * @param {Object} options - Options for recommendation generation
    * @returns {Promise<Array>} - List of recommended products with scores
@@ -26,17 +26,17 @@ class HybridRecommendationService {
         excludeInCart = true,
         excludePurchased = true,
         categories = [],
-        weights = { collaborative: 0.6, contentBased: 0.4 }
+        weights = { collaborative: 0.6, contentBased: 0.4 },
       } = options;
 
       // Check if we have cached hybrid recommendations
       const cachedRecommendation = await Recommendation.findOne({
         userId,
         recommendationType: 'hybrid',
-        expiresAt: { $gt: new Date() }
+        expiresAt: { $gt: new Date() },
       })
-      .populate('products.productId', 'name price images category brand')
-      .lean();
+        .populate('products.productId', 'name price images category brand')
+        .lean();
 
       if (cachedRecommendation) {
         return cachedRecommendation.products.slice(0, limit);
@@ -47,11 +47,11 @@ class HybridRecommendationService {
         limit: Math.min(limit * 2, 20), // Get more to have a good pool to choose from
         excludeViewed,
         excludeInCart,
-        excludePurchased
+        excludePurchased,
       };
       const collaborativeRecommendations = await collaborativeFilterService.generateRecommendations(
-        userId, 
-        collaborativeOptions
+        userId,
+        collaborativeOptions,
       );
 
       // 2. Get content-based recommendations
@@ -60,11 +60,11 @@ class HybridRecommendationService {
         excludeViewed,
         excludeInCart,
         excludePurchased,
-        categories
+        categories,
       };
       const contentBasedRecommendations = await contentBasedFilterService.generateRecommendations(
-        userId, 
-        contentBasedOptions
+        userId,
+        contentBasedOptions,
       );
 
       // 3. Merge recommendations using a weighted approach
@@ -72,7 +72,7 @@ class HybridRecommendationService {
         collaborativeRecommendations,
         contentBasedRecommendations,
         weights,
-        limit
+        limit,
       );
 
       // 4. Cache the recommendations
@@ -87,7 +87,7 @@ class HybridRecommendationService {
 
   /**
    * Get similar products using a hybrid approach
-   * 
+   *
    * @param {string} productId - Product ID to find similar products for
    * @param {number} limit - Number of similar products to return
    * @returns {Promise<Array>} - List of similar product IDs with scores
@@ -103,10 +103,10 @@ class HybridRecommendationService {
       const cachedRecommendation = await Recommendation.findOne({
         sourceProductId: productId,
         recommendationType: 'hybrid',
-        expiresAt: { $gt: new Date() }
+        expiresAt: { $gt: new Date() },
       })
-      .populate('products.productId', 'name price images category brand')
-      .lean();
+        .populate('products.productId', 'name price images category brand')
+        .lean();
 
       if (cachedRecommendation) {
         return cachedRecommendation.products.slice(0, limit);
@@ -114,14 +114,14 @@ class HybridRecommendationService {
 
       // 1. Get collaborative similar products
       const collaborativeSimilar = await collaborativeFilterService.getSimilarProducts(
-        productId, 
-        Math.min(limit * 2, 10)
+        productId,
+        Math.min(limit * 2, 10),
       );
 
       // 2. Get content-based similar products
       const contentBasedSimilar = await contentBasedFilterService.getSimilarProducts(
-        productId, 
-        Math.min(limit * 2, 10)
+        productId,
+        Math.min(limit * 2, 10),
       );
 
       // 3. Merge the recommendations with default weights
@@ -130,27 +130,27 @@ class HybridRecommendationService {
         collaborativeSimilar,
         contentBasedSimilar,
         weights,
-        limit
+        limit,
       );
 
       // 4. Cache the recommendations
       await Recommendation.findOneAndUpdate(
-        { 
-          sourceProductId: productId, 
-          recommendationType: 'hybrid' 
+        {
+          sourceProductId: productId,
+          recommendationType: 'hybrid',
         },
         {
           userId: null, // Not user-specific
           sourceProductId: productId,
           recommendationType: 'hybrid',
-          products: mergedRecommendations.map(r => ({
+          products: mergedRecommendations.map((r) => ({
             productId: r.productId,
             score: r.score,
-            reason: r.reason
+            reason: r.reason,
           })),
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         },
-        { upsert: true, new: true }
+        { upsert: true, new: true },
       );
 
       return mergedRecommendations;
@@ -167,11 +167,11 @@ class HybridRecommendationService {
   _mergeRecommendations(collaborativeRecs, contentBasedRecs, weights, limit) {
     // Create a map to hold merged products with their scores
     const mergedMap = new Map();
-    
+
     // Process collaborative recommendations
-    collaborativeRecs.forEach(rec => {
+    collaborativeRecs.forEach((rec) => {
       const productId = rec.productId.toString();
-      
+
       if (!mergedMap.has(productId)) {
         mergedMap.set(productId, {
           productId: rec.productId,
@@ -179,15 +179,15 @@ class HybridRecommendationService {
           sources: ['collaborative'],
           sourceScores: { collaborative: rec.score },
           reason: rec.reason,
-          product: rec.product
+          product: rec.product,
         });
       }
     });
-    
+
     // Process content-based recommendations
-    contentBasedRecs.forEach(rec => {
+    contentBasedRecs.forEach((rec) => {
       const productId = rec.productId.toString();
-      
+
       if (!mergedMap.has(productId)) {
         // Add new recommendation
         mergedMap.set(productId, {
@@ -196,7 +196,7 @@ class HybridRecommendationService {
           sources: ['contentBased'],
           sourceScores: { contentBased: rec.score },
           reason: rec.reason,
-          product: rec.product
+          product: rec.product,
         });
       } else {
         // Update existing recommendation
@@ -204,27 +204,27 @@ class HybridRecommendationService {
         existing.score += rec.score * weights.contentBased;
         existing.sources.push('contentBased');
         existing.sourceScores.contentBased = rec.score;
-        
+
         // Update reason to indicate hybrid source
         if (existing.sources.includes('collaborative')) {
           existing.reason = 'Recommended based on your browsing history and product features';
         }
       }
     });
-    
+
     // Convert map to array, sort by score, and limit
     const result = Array.from(mergedMap.values())
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
-      
+
     // Normalize scores to a 0-10 range for consistency
-    const maxScore = Math.max(...result.map(item => item.score));
+    const maxScore = Math.max(...result.map((item) => item.score));
     if (maxScore > 0) {
-      result.forEach(item => {
+      result.forEach((item) => {
         item.score = Math.round((item.score / maxScore) * 10 * 10) / 10; // Round to 1 decimal place
       });
     }
-    
+
     return result;
   }
 
@@ -237,25 +237,25 @@ class HybridRecommendationService {
       // Set expiration date (24 hours)
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24);
-      
+
       // Create or update recommendations
       await Recommendation.findOneAndUpdate(
-        { 
+        {
           userId,
           recommendationType: 'hybrid',
-          sourceProductId: null // User-based, not product-based
+          sourceProductId: null, // User-based, not product-based
         },
         {
           userId,
           recommendationType: 'hybrid',
-          products: recommendations.map(rec => ({
+          products: recommendations.map((rec) => ({
             productId: rec.productId,
             score: rec.score,
-            reason: rec.reason
+            reason: rec.reason,
           })),
-          expiresAt
+          expiresAt,
         },
-        { upsert: true }
+        { upsert: true },
       );
     } catch (error) {
       // Don't fail if caching fails, just log the error
@@ -264,4 +264,4 @@ class HybridRecommendationService {
   }
 }
 
-export default new HybridRecommendationService(); 
+export default new HybridRecommendationService();

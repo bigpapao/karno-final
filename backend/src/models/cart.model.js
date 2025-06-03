@@ -59,7 +59,7 @@ const cartSchema = new mongoose.Schema(
     },
     expiresAt: {
       type: Date,
-      default: function() {
+      default() {
         const now = new Date();
         return new Date(now.setDate(now.getDate() + 7));
       },
@@ -72,20 +72,16 @@ const cartSchema = new mongoose.Schema(
 );
 
 // Method to recalculate total price
-cartSchema.methods.recalculateCart = function() {
-  this.totalPrice = this.items.reduce((total, item) => {
-    return total + (item.price * item.quantity);
-  }, 0);
-  
-  this.totalItems = this.items.reduce((total, item) => {
-    return total + item.quantity;
-  }, 0);
-  
+cartSchema.methods.recalculateCart = function () {
+  this.totalPrice = this.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+
+  this.totalItems = this.items.reduce((total, item) => total + item.quantity, 0);
+
   return this;
 };
 
 // Pre-save hook to ensure totals are calculated
-cartSchema.pre('save', function(next) {
+cartSchema.pre('save', function (next) {
   if (!this.user && !this.sessionId) {
     next(new Error('Either user or sessionId must be provided'));
   } else {
@@ -100,4 +96,4 @@ cartSchema.index({ sessionId: 1 });
 
 const Cart = mongoose.model('Cart', cartSchema);
 
-export default Cart; 
+export default Cart;

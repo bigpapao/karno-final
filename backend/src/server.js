@@ -7,7 +7,8 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { connectDB } from './config/database.js';
-import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { errorHandler } from './middleware/error-handler.middleware.js';
+// app.use(errorHandler);
 import { logger, logAPIRequest } from './utils/logger.js';
 import { createAllIndexes } from './utils/database-indexes.js';
 
@@ -35,6 +36,7 @@ import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
 import productRoutes from './routes/product.routes.js';
 import categoryRoutes from './routes/category.routes.js';
+import brandRoutes from './routes/brand.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
@@ -44,15 +46,16 @@ import addressRoutes from './routes/address.routes.js';
 import sitemapRoutes from './routes/sitemap.routes.js';
 import recommendationRoutes from './routes/recommendation.routes.js';
 import recommendationMonitoringRoutes from './routes/recommendation-monitoring.routes.js';
+import vehicleRoutes from './routes/vehicle.routes.js';
 
 const app = express();
-const port = process.env.PORT || 5001;
+const port = process.env.PORT || 5000;
 
 // Connect to MongoDB
 try {
   await connectDB();
   logger.info('MongoDB connected successfully');
-  
+
   // Create database indexes (if not already present)
   if (process.env.CREATE_INDEXES_ON_STARTUP !== 'false') {
     try {
@@ -95,10 +98,20 @@ if (process.env.NODE_ENV === 'production') {
 
 // CORS configuration for frontend
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5000', 'http://localhost:5001'],
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5000',
+    'http://localhost:5001',
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'], // Removed X-XSRF-TOKEN and X-CSRF-TOKEN
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+  ], // Removed X-XSRF-TOKEN and X-CSRF-TOKEN
 }));
 
 // Apply security middleware stack
@@ -148,6 +161,16 @@ app.use('/api/recommendations/train', anonymizeUserData);
 const currentFileUrl = import.meta.url;
 const currentDirPath = path.dirname(fileURLToPath(currentFileUrl));
 
+// Special handling for uploaded images with proper CORS
+app.use('/uploads', (req, res, next) => {
+  // Set CORS headers specifically for uploaded files
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(currentDirPath, 'public/uploads')));
+
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(currentDirPath, 'public')));
 
@@ -166,6 +189,7 @@ apiV1Router.use('/auth', authRoutes);
 apiV1Router.use('/users', userRoutes);
 apiV1Router.use('/products', productRoutes);
 apiV1Router.use('/categories', categoryRoutes);
+apiV1Router.use('/brands', brandRoutes);
 apiV1Router.use('/orders', orderRoutes);
 apiV1Router.use('/payments', paymentRoutes);
 apiV1Router.use('/dashboard', dashboardRoutes);
@@ -175,14 +199,18 @@ apiV1Router.use('/addresses', addressRoutes);
 apiV1Router.use('/sitemap', sitemapRoutes);
 apiV1Router.use('/recommendations', recommendationRoutes);
 apiV1Router.use('/recommendation-monitoring', recommendationMonitoringRoutes);
+apiV1Router.use('/vehicles', vehicleRoutes);
 
 // Mount versioned API router
 app.use('/api/v1', apiV1Router);
 
-// Redirect /api to /api/v1 for backward compatibility
-app.use('/api', (req, res) => {
-  res.redirect(308, `/api/v1${req.path}`);
-});
+// 404 handler
+const notFoundHandler = (req, res, next) => {
+  res.status(404).json({
+    status: 'error',
+    message: `Route ${req.originalUrl} not found`,
+  });
+};
 
 // Handle 404 errors
 app.use(notFoundHandler);
@@ -194,4 +222,3 @@ app.use(errorHandler);
 app.listen(port, () => {
   logger.info(`Server is running on port ${port}`);
 });
-

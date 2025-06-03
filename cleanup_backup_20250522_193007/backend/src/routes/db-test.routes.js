@@ -16,7 +16,7 @@ const router = express.Router();
 router.get('/status', async (req, res) => {
   try {
     const status = mongoose.connection.readyState;
-    
+
     // Map readyState to human-readable status
     const statusMap = {
       0: 'disconnected',
@@ -24,17 +24,17 @@ router.get('/status', async (req, res) => {
       2: 'connecting',
       3: 'disconnecting',
     };
-    
+
     // Get connection stats if available
     let poolStats = { note: 'Connection pool stats not available' };
     try {
       poolStats = mongoose.connection.client.topology
         ? {
-            poolSize: mongoose.connection.client.topology.s.options.maxPoolSize || 'Unknown',
-            minPoolSize: mongoose.connection.client.topology.s.options.minPoolSize || 'Unknown',
-            connectTimeoutMS: mongoose.connection.client.topology.s.options.connectTimeoutMS || 'Unknown',
-            socketTimeoutMS: mongoose.connection.client.topology.s.options.socketTimeoutMS || 'Unknown',
-          }
+          poolSize: mongoose.connection.client.topology.s.options.maxPoolSize || 'Unknown',
+          minPoolSize: mongoose.connection.client.topology.s.options.minPoolSize || 'Unknown',
+          connectTimeoutMS: mongoose.connection.client.topology.s.options.connectTimeoutMS || 'Unknown',
+          socketTimeoutMS: mongoose.connection.client.topology.s.options.socketTimeoutMS || 'Unknown',
+        }
         : { note: 'Connection pool stats not available' };
     } catch (err) {
       logger.warn({
@@ -42,7 +42,7 @@ router.get('/status', async (req, res) => {
         error: err.message,
       });
     }
-      
+
     return res.status(200).json({
       success: true,
       connection: {
@@ -61,7 +61,7 @@ router.get('/status', async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
-    
+
     return res.status(500).json({
       success: false,
       message: 'Error checking database status',
@@ -83,7 +83,7 @@ router.post('/sample-data', async (req, res) => {
       category: null,
       product: null,
     };
-    
+
     // Create a test brand
     const brand = new Brand({
       name: `Test Brand ${timestamp}`,
@@ -92,7 +92,7 @@ router.post('/sample-data', async (req, res) => {
     });
     await brand.save();
     results.brand = brand;
-    
+
     // Create a test category
     const category = new Category({
       name: `Test Category ${timestamp}`,
@@ -101,7 +101,7 @@ router.post('/sample-data', async (req, res) => {
     });
     await category.save();
     results.category = category;
-    
+
     // Create a test product
     const product = new Product({
       name: `Test Product ${timestamp}`,
@@ -115,7 +115,7 @@ router.post('/sample-data', async (req, res) => {
     });
     await product.save();
     results.product = product;
-    
+
     return res.status(201).json({
       success: true,
       message: 'Sample data created successfully',
@@ -127,7 +127,7 @@ router.post('/sample-data', async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
-    
+
     return res.status(500).json({
       success: false,
       message: 'Error creating sample data',
@@ -149,7 +149,7 @@ router.get('/count', async (req, res) => {
       categories: await Category.countDocuments(),
       brands: await Brand.countDocuments(),
     };
-    
+
     return res.status(200).json({
       success: true,
       message: 'Collection counts retrieved successfully',
@@ -161,7 +161,7 @@ router.get('/count', async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
-    
+
     return res.status(500).json({
       success: false,
       message: 'Error getting collection counts',
@@ -183,7 +183,7 @@ router.get('/products', async (req, res) => {
       .sort('-createdAt')
       .limit(10)
       .lean();
-    
+
     return res.status(200).json({
       success: true,
       count: products.length,
@@ -196,7 +196,7 @@ router.get('/products', async (req, res) => {
       error: error.message,
       stack: error.stack,
     });
-    
+
     return res.status(500).json({
       success: false,
       message: 'Error getting products',
@@ -205,4 +205,4 @@ router.get('/products', async (req, res) => {
   }
 });
 
-export default router; 
+export default router;

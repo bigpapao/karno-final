@@ -6,53 +6,69 @@ import { guestCartUtils } from '../utils/guestCart';
 
 const AppInitializer = ({ children }) => {
   const dispatch = useDispatch();
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { isAuthenticated, user, authChecked, loading } = useSelector((state) => state.auth);
   const authCheckAttempted = useRef(false);
+  const cartInitialized = useRef(false);
+  const appInitialized = useRef(false);
+  const wasEverAuthenticated = useRef(false); // Track if user was ever authenticated in this session
 
-  // Initialize app authentication and cart state
+  // Initialize app on mount
   useEffect(() => {
-    console.log('Initializing app...');
-    
-    // Initialize auth state
-    dispatch(initializeAuth());
-    
-    // Check authentication status using HTTP-only cookies
-    if (!authCheckAttempted.current) {
-      console.log('Checking authentication status...');
-      authCheckAttempted.current = true;
-      dispatch(checkAuth());
+    if (!appInitialized.current) {
+      appInitialized.current = true;
+      dispatch(initializeAuth());
     }
   }, [dispatch]);
 
-  // Initialize guest cart if not authenticated
+  // Check authentication status
   useEffect(() => {
-    if (!isAuthenticated) {
-      const guestCart = guestCartUtils.getCart();
-      if (guestCart.length > 0) {
-        dispatch(initializeCart(guestCart));
-      }
+    if (!authCheckAttempted.current && !loading && appInitialized.current) {
+      authCheckAttempted.current = true;
+      dispatch(checkAuth());
     }
-  }, [dispatch, isAuthenticated]);
+  }, [dispatch, loading]);
 
-  // Handle cart operations after user authentication
+  // Track if user was ever authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Check if there's a guest cart to sync
-      const guestCart = guestCartUtils.getCart();
-      
-      if (guestCart.length > 0) {
-        console.log('Syncing guest cart with user cart...');
-        dispatch(syncGuestCart()).then(() => {
-          // After syncing, fetch the updated cart
-          dispatch(fetchCart());
-        });
+      wasEverAuthenticated.current = true;
+    }
+  }, [isAuthenticated, user]);
+
+  // Handle cart initialization based on auth state
+  useEffect(() => {
+    if (authChecked && !loading) {
+      if (isAuthenticated && user) {
+        // User is authenticated - fetch user cart and sync guest cart if needed
+        if (!cartInitialized.current) {
+          cartInitialized.current = true;
+          
+          // Check if there's a guest cart to sync
+          const guestCart = guestCartUtils.getCart();
+          if (guestCart && guestCart.length > 0) {
+            // Sync guest cart with user cart
+            dispatch(syncGuestCart(guestCart));
+          } else {
+            // Just fetch user cart
+            dispatch(fetchCart());
+          }
+        }
       } else {
-        // No guest cart, just fetch user cart
-        console.log('Fetching user cart...');
-        dispatch(fetchCart());
+        // User is not authenticated
+        if (wasEverAuthenticated.current) {
+          // User was authenticated but now isn't (logged out)
+          cartInitialized.current = false;
+          wasEverAuthenticated.current = false;
+        }
+        
+        // Initialize guest cart if not already done
+        if (!cartInitialized.current) {
+          cartInitialized.current = true;
+          dispatch(initializeCart());
+        }
       }
     }
-  }, [dispatch, isAuthenticated, user]);
+  }, [isAuthenticated, user, authChecked, loading, dispatch]);
 
   return children;
 };

@@ -5,46 +5,46 @@ const recommendationSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    index: true
+    index: true,
   },
   sourceProductId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
     sparse: true,
-    index: true
+    index: true,
   },
   recommendationType: {
     type: String,
     enum: ['collaborative', 'content_based', 'popular', 'hybrid', 'personalized', 'trending'],
     required: true,
-    index: true
+    index: true,
   },
   products: [{
     productId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Product'
+      ref: 'Product',
     },
     score: {
       type: Number,
-      default: 0
+      default: 0,
     },
-    reason: String
+    reason: String,
   }],
   categoryId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
-    sparse: true
+    sparse: true,
   },
   createdAt: {
     type: Date,
     default: Date.now,
-    index: true
+    index: true,
   },
   expiresAt: {
     type: Date,
     index: true,
-    expires: 0 // TTL index to automatically delete expired recommendations
-  }
+    expires: 0, // TTL index to automatically delete expired recommendations
+  },
 });
 
 // Compound index for most common query pattern
@@ -52,4 +52,4 @@ recommendationSchema.index({ userId: 1, recommendationType: 1, createdAt: -1 });
 
 const Recommendation = mongoose.model('Recommendation', recommendationSchema);
 
-export default Recommendation; 
+export default Recommendation;

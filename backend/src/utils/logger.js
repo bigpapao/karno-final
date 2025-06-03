@@ -11,7 +11,7 @@ const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
   winston.format.splat(),
-  winston.format.json()
+  winston.format.json(),
 );
 
 // Create logger instance
@@ -24,8 +24,8 @@ export const logger = winston.createLogger({
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
-        winston.format.simple()
-      )
+        winston.format.simple(),
+      ),
     }),
     // Write all logs with level 'error' and below to error.log
     new DailyRotateFile({
@@ -33,29 +33,29 @@ export const logger = winston.createLogger({
       datePattern: 'YYYY-MM-DD',
       level: 'error',
       maxSize: '20m',
-      maxFiles: '14d'
+      maxFiles: '14d',
     }),
     // Write all logs with level 'info' and below to combined.log
     new DailyRotateFile({
       filename: path.join(__dirname, '../../logs', 'combined-%DATE%.log'),
       datePattern: 'YYYY-MM-DD',
       maxSize: '20m',
-      maxFiles: '14d'
-    })
-  ]
+      maxFiles: '14d',
+    }),
+  ],
 });
 
 // Create a stream object for Morgan
 logger.stream = {
   write: (message) => {
     logger.info(message.trim());
-  }
+  },
 };
 
 // API Request logging middleware
 export const logAPIRequest = (req, res, next) => {
   const start = Date.now();
-  
+
   // Log the incoming request
   logger.info({
     message: 'API Request',
@@ -64,14 +64,14 @@ export const logAPIRequest = (req, res, next) => {
     ip: req.ip || req.connection.remoteAddress,
     userAgent: req.get('user-agent'),
     userId: req.user?.id || 'anonymous',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 
   // Override res.end to log response
   const originalEnd = res.end;
-  res.end = function(...args) {
+  res.end = function (...args) {
     const duration = Date.now() - start;
-    
+
     logger.info({
       message: 'API Response',
       method: req.method,
@@ -81,7 +81,7 @@ export const logAPIRequest = (req, res, next) => {
       ip: req.ip || req.connection.remoteAddress,
       userId: req.user?.id || 'anonymous',
     });
-    
+
     originalEnd.apply(this, args);
   };
 

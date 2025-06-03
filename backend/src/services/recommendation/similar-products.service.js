@@ -8,7 +8,7 @@ import popularProductsService from './popular-products.service.js';
 class SimilarProductsService {
   /**
    * Find similar products based on co-occurrence in user events
-   * 
+   *
    * @param {string} productId - Product ID to find similar products for
    * @param {number} limit - Number of similar products to return
    * @returns {Promise<Array>} - List of similar product IDs with scores
@@ -24,10 +24,10 @@ class SimilarProductsService {
       const cachedRecommendation = await Recommendation.findOne({
         sourceProductId: productId,
         recommendationType: 'collaborative',
-        expiresAt: { $gt: new Date() }
+        expiresAt: { $gt: new Date() },
       })
-      .populate('products.productId', 'name price images category brand')
-      .lean();
+        .populate('products.productId', 'name price images category brand')
+        .lean();
 
       if (cachedRecommendation) {
         return cachedRecommendation.products.slice(0, limit);
@@ -35,7 +35,7 @@ class SimilarProductsService {
 
       // Find users who interacted with this product
       const usersWhoInteracted = await Event.distinct('userId', {
-        productId: new mongoose.Types.ObjectId(productId)
+        productId: new mongoose.Types.ObjectId(productId),
       });
 
       if (usersWhoInteracted.length === 0) {
@@ -48,8 +48,8 @@ class SimilarProductsService {
         {
           $match: {
             userId: { $in: usersWhoInteracted },
-            productId: { $ne: new mongoose.Types.ObjectId(productId) }
-          }
+            productId: { $ne: new mongoose.Types.ObjectId(productId) },
+          },
         },
         {
           $group: {
@@ -60,39 +60,39 @@ class SimilarProductsService {
                   branches: [
                     { case: { $eq: ['$eventType', 'purchase'] }, then: 5 },
                     { case: { $eq: ['$eventType', 'add_to_cart'] }, then: 2 },
-                    { case: { $eq: ['$eventType', 'view'] }, then: 1 }
+                    { case: { $eq: ['$eventType', 'view'] }, then: 1 },
                   ],
-                  default: 0
-                }
-              }
+                  default: 0,
+                },
+              },
             },
-            userCount: { $addToSet: '$userId' }
-          }
+            userCount: { $addToSet: '$userId' },
+          },
         },
         {
           $project: {
             productId: '$_id',
             score: 1,
             userOverlap: { $size: '$userCount' },
-            overlapRatio: { $divide: [{ $size: '$userCount' }, usersWhoInteracted.length] }
-          }
+            overlapRatio: { $divide: [{ $size: '$userCount' }, usersWhoInteracted.length] },
+          },
         },
         {
-          $sort: { score: -1, overlapRatio: -1 }
+          $sort: { score: -1, overlapRatio: -1 },
         },
         {
-          $limit: limit
+          $limit: limit,
         },
         {
           $lookup: {
             from: 'products',
             localField: '_id',
             foreignField: '_id',
-            as: 'product'
-          }
+            as: 'product',
+          },
         },
         {
-          $unwind: '$product'
+          $unwind: '$product',
         },
         {
           $project: {
@@ -105,14 +105,14 @@ class SimilarProductsService {
               price: '$product.price',
               images: '$product.images',
               category: '$product.category',
-              brand: '$product.brand'
-            }
-          }
-        }
+              brand: '$product.brand',
+            },
+          },
+        },
       ]);
 
       // Format and cache the results
-      const formattedResults = coOccurrenceResults.map(item => ({
+      const formattedResults = coOccurrenceResults.map((item) => ({
         productId: item.productId,
         score: item.score,
         reason: `${Math.round(item.overlapRatio * 100)}% of users who interacted with this product also interacted with this item`,
@@ -121,8 +121,8 @@ class SimilarProductsService {
           price: item.product.price,
           images: item.product.images ? item.product.images.slice(0, 1) : [],
           category: item.product.category,
-          brand: item.product.brand
-        }
+          brand: item.product.brand,
+        },
       }));
 
       // Cache the results for future requests
@@ -135,14 +135,14 @@ class SimilarProductsService {
           userId: null, // Not user-specific
           sourceProductId: productId,
           recommendationType: 'collaborative',
-          products: formattedResults.map(r => ({
+          products: formattedResults.map((r) => ({
             productId: r.productId,
             score: r.score,
-            reason: r.reason
+            reason: r.reason,
           })),
-          expiresAt
+          expiresAt,
         },
-        { upsert: true, new: true }
+        { upsert: true, new: true },
       );
 
       return formattedResults;
@@ -153,4 +153,4 @@ class SimilarProductsService {
   }
 }
 
-export default new SimilarProductsService(); 
+export default new SimilarProductsService();

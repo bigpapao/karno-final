@@ -12,7 +12,7 @@ import {
   updateGuestCartItem,
   removeFromGuestCart,
   clearGuestCart,
-  mergeGuestCart
+  mergeGuestCart,
 } from '../controllers/cart.controller.js';
 
 const router = express.Router();
@@ -34,4 +34,4 @@ router.delete('/guest/clear', clearGuestCart);
 // Merge guest cart with user cart after login
 router.post('/merge', authenticate, mergeGuestCart);
 
-export default router; 
+export default router;

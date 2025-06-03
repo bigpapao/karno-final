@@ -1,61 +1,33 @@
 {
   "short_name": "کارنو",
-  "name": "کارنو | فروشگاه قطعات خودرو",
-  "description": "بزرگترین فروشگاه آنلاین قطعات خودرو با قیمت مناسب و کیفیت بالا",
+  "name": "کارنو - فروشگاه قطعات خودرو",
+  "description": "فروشگاه آنلاین قطعات و لوازم یدکی خودروهای ایرانی",
   "icons": [
     {
       "src": "favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
+    },
+    {
+      "src": "images/logo/logo-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "images/logo/logo-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": "/?source=pwa",
+  "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#2e7d32",
+  "theme_color": "#1976d2",
   "background_color": "#ffffff",
-  "categories": ["shopping", "automotive", "ecommerce"],
+  "orientation": "portrait-primary",
   "dir": "rtl",
-  "lang": "fa-IR",
-  "prefer_related_applications": false,
-  "shortcuts": [
-    {
-      "name": "جستجوی محصولات",
-      "short_name": "جستجو",
-      "description": "جستجو در محصولات کارنو",
-      "url": "/products?source=pwa",
-      "icons": [{ "src": "icons/search.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "سبد خرید",
-      "short_name": "سبد",
-      "description": "مشاهده سبد خرید",
-      "url": "/cart?source=pwa",
-      "icons": [{ "src": "icons/cart.png", "sizes": "96x96" }]
-    }
-  ],
-  "related_applications": [],
-  "screenshots": [
-    {
-      "src": "screenshots/home.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "platform": "wide",
-      "label": "صفحه اصلی کارنو"
-    },
-    {
-      "src": "screenshots/products.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "platform": "wide",
-      "label": "محصولات کارنو"
-    },
-    {
-      "src": "screenshots/product-mobile.png",
-      "sizes": "750x1334",
-      "type": "image/png",
-      "platform": "narrow",
-      "label": "نسخه موبایل جزئیات محصول"
-    }
-  ]
+  "lang": "fa",
+  "scope": "/",
+  "categories": ["shopping", "automotive", "business"]
 }

@@ -17,13 +17,17 @@ const CheckoutGuard = ({ children }) => {
   const location = useLocation();
   const { user, isAuthenticated, loading, profileStatus, profileStatusLoading } = useSelector((state) => state.auth);
   const [showRedirectAlert, setShowRedirectAlert] = useState(false);
-  
-  // Fetch profile status when the component mounts
+
+  const CART_ENABLED = String(process.env.REACT_APP_CART_ENABLED).toLowerCase() === 'true';
+
+  // Always call useEffect at the top level
   useEffect(() => {
     if (isAuthenticated && !profileStatus) {
       dispatch(getProfileStatus());
     }
   }, [isAuthenticated, dispatch, profileStatus]);
+  
+  if (!CART_ENABLED) return children;
   
   // If not authenticated, redirect to login
   if (!isAuthenticated) {

@@ -1,10 +1,10 @@
 import express from 'express';
-import { 
-  getMetrics, 
-  getModelFreshness, 
-  getApiPerformance, 
-  triggerDataDriftCheck, 
-  updateModelFreshness 
+import {
+  getMetrics,
+  getModelFreshness,
+  getApiPerformance,
+  triggerDataDriftCheck,
+  updateModelFreshness,
 } from '../controllers/recommendation-monitoring.controller.js';
 import { authenticate, authorize } from '../middleware/auth.middleware.js';
 
@@ -21,4 +21,4 @@ router.get('/api-performance', getApiPerformance);
 router.post('/check-data-drift', triggerDataDriftCheck);
 router.post('/update-model-freshness', updateModelFreshness);
 
-export default router; 
+export default router;

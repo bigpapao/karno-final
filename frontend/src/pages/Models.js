@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -8,7 +8,6 @@ import {
   TextField,
   InputAdornment,
   Card,
-  CardActionArea,
   CardContent,
   CardMedia,
   Chip,
@@ -20,369 +19,98 @@ import {
   MenuItem,
   Button,
   Pagination,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   DirectionsCar as CarIcon,
   FilterAlt as FilterIcon,
-  Speed as SpeedIcon,
   Settings as SettingsIcon,
+  Star as StarIcon,
+  Business as BusinessIcon,
 } from '@mui/icons-material';
-
-// Sample car models data
-const carModels = [
-  // سایپا
-  {
-    id: 1,
-    name: 'پراید 111',
-    brand: 'سایپا',
-    brandId: 1,
-    image: '/images/models/pride111.jpg',
-    year: '1398-1401',
-    engine: '1.3 لیتر',
-    partsCount: 450,
-    popular: true,
-    description: 'پراید 111 یکی از پرفروش‌ترین خودروهای ایران با قطعات فراوان در بازار است.',
-    category: 'هاچبک',
-  },
-  {
-    id: 2,
-    name: 'پراید 131',
-    brand: 'سایپا',
-    brandId: 1,
-    image: '/images/models/pride131.jpg',
-    year: '1395-1399',
-    engine: '1.3 لیتر',
-    partsCount: 480,
-    popular: true,
-    description: 'پراید 131 نسخه سدان پراید که به دلیل قیمت مناسب و قطعات در دسترس، همچنان پرطرفدار است.',
-    category: 'سدان',
-  },
-  {
-    id: 3,
-    name: 'تیبا',
-    brand: 'سایپا',
-    brandId: 1,
-    image: '/images/models/tiba.jpg',
-    year: '1396-1402',
-    engine: '1.5 لیتر',
-    partsCount: 420,
-    popular: true,
-    description: 'تیبا جایگزین پراید در خط تولید سایپا با طراحی بهبود یافته و امکانات بیشتر.',
-    category: 'سدان',
-  },
-  {
-    id: 4,
-    name: 'کوییک',
-    brand: 'سایپا',
-    brandId: 1,
-    image: '/images/models/quick.jpg',
-    year: '1397-1402',
-    engine: '1.5 لیتر',
-    partsCount: 380,
-    popular: true,
-    description: 'کوییک هاچبک اتوماتیک سایپا با طراحی مدرن و امکانات ایمنی بیشتر نسبت به سایر محصولات سایپا.',
-    category: 'هاچبک',
-  },
-  {
-    id: 5,
-    name: 'شاهین',
-    brand: 'سایپا',
-    brandId: 1,
-    image: '/images/models/shahin.jpg',
-    year: '1400-1402',
-    engine: '1.6 لیتر',
-    partsCount: 320,
-    popular: false,
-    description: 'شاهین جدیدترین محصول سایپا با طراحی مدرن و پلتفرم جدید که جایگزین محصولات قدیمی سایپا شده است.',
-    category: 'سدان',
-  },
-  
-  // ایران خودرو
-  {
-    id: 6,
-    name: 'پژو 206',
-    brand: 'ایران خودرو',
-    brandId: 2,
-    image: '/images/models/206.jpg',
-    year: '1385-1402',
-    engine: '1.4 لیتر',
-    partsCount: 520,
-    popular: true,
-    description: 'پژو 206 یکی از محبوب‌ترین خودروهای ایران با طراحی زیبا و عملکرد مناسب.',
-    category: 'هاچبک',
-  },
-  {
-    id: 7,
-    name: 'پژو پارس',
-    brand: 'ایران خودرو',
-    brandId: 2,
-    image: '/images/models/pars.jpg',
-    year: '1390-1402',
-    engine: '1.8 لیتر',
-    partsCount: 490,
-    popular: true,
-    description: 'پژو پارس نسخه بهبود یافته پژو 405 با طراحی داخلی و خارجی متفاوت و امکانات بیشتر.',
-    category: 'سدان',
-  },
-  {
-    id: 8,
-    name: 'سمند',
-    brand: 'ایران خودرو',
-    brandId: 2,
-    image: '/images/models/samand.jpg',
-    year: '1388-1402',
-    engine: '1.7 لیتر',
-    partsCount: 470,
-    popular: true,
-    description: 'سمند اولین خودروی ملی ایران که توسط ایران خودرو طراحی و تولید شده است.',
-    category: 'سدان',
-  },
-  {
-    id: 9,
-    name: 'دنا',
-    brand: 'ایران خودرو',
-    brandId: 2,
-    image: '/images/models/dena.jpg',
-    year: '1394-1402',
-    engine: '1.7 لیتر',
-    partsCount: 450,
-    popular: true,
-    description: 'دنا نسخه بهبود یافته سمند با طراحی مدرن‌تر و امکانات بیشتر.',
-    category: 'سدان',
-  },
-  {
-    id: 10,
-    name: 'رانا',
-    brand: 'ایران خودرو',
-    brandId: 2,
-    image: '/images/models/runna.jpg',
-    year: '1392-1402',
-    engine: '1.6 لیتر',
-    partsCount: 430,
-    popular: false,
-    description: 'رانا ترکیبی از پلتفرم پژو 206 و طراحی جدید که توسط ایران خودرو تولید می‌شود.',
-    category: 'سدان',
-  },
-  
-  // ام وی ام
-  {
-    id: 11,
-    name: 'ام وی ام X22',
-    brand: 'ام وی ام',
-    brandId: 3,
-    image: '/images/models/mvmx22.jpg',
-    year: '1396-1402',
-    engine: '1.5 لیتر',
-    partsCount: 380,
-    popular: true,
-    description: 'ام وی ام X22 یک کراس‌اوور کامپکت با قیمت مناسب و امکانات خوب.',
-    category: 'کراس‌اوور',
-  },
-  {
-    id: 12,
-    name: 'ام وی ام X33',
-    brand: 'ام وی ام',
-    brandId: 3,
-    image: '/images/models/mvmx33.jpg',
-    year: '1395-1401',
-    engine: '2.0 لیتر',
-    partsCount: 410,
-    popular: true,
-    description: 'ام وی ام X33 یک شاسی‌بلند کامپکت با طراحی مدرن و امکانات مناسب.',
-    category: 'شاسی‌بلند',
-  },
-  {
-    id: 13,
-    name: 'ام وی ام 315',
-    brand: 'ام وی ام',
-    brandId: 3,
-    image: '/images/models/mvm315.jpg',
-    year: '1394-1400',
-    engine: '1.5 لیتر',
-    partsCount: 360,
-    popular: false,
-    description: 'ام وی ام 315 یک سدان کامپکت با قیمت مناسب و امکانات قابل قبول.',
-    category: 'سدان',
-  },
-  
-  // بهمن موتور
-  {
-    id: 14,
-    name: 'مزدا 3',
-    brand: 'بهمن موتور',
-    brandId: 4,
-    image: '/images/models/mazda3.jpg',
-    year: '1397-1401',
-    engine: '2.0 لیتر',
-    partsCount: 390,
-    popular: true,
-    description: 'مزدا 3 یک سدان با کیفیت ژاپنی که توسط بهمن موتور در ایران مونتاژ می‌شود.',
-    category: 'سدان',
-  },
-  {
-    id: 15,
-    name: 'دیگنیتی',
-    brand: 'بهمن موتور',
-    brandId: 4,
-    image: '/images/models/dignity.jpg',
-    year: '1400-1402',
-    engine: '1.5 لیتر توربو',
-    partsCount: 340,
-    popular: false,
-    description: 'دیگنیتی یک کراس‌اوور لوکس با امکانات فراوان که توسط بهمن موتور عرضه می‌شود.',
-    category: 'کراس‌اوور',
-  },
-  {
-    id: 16,
-    name: 'فیدلیتی',
-    brand: 'بهمن موتور',
-    brandId: 4,
-    image: '/images/models/fidelity.jpg',
-    year: '1400-1402',
-    engine: '1.5 لیتر توربو',
-    partsCount: 330,
-    popular: false,
-    description: 'فیدلیتی یک شاسی‌بلند 5 و 7 نفره با امکانات خوب که توسط بهمن موتور عرضه می‌شود.',
-    category: 'شاسی‌بلند',
-  },
-];
-
-// Get unique brands for filter
-const brands = [...new Set(carModels.map(model => model.brand))];
-// Get unique categories for filter
-const categories = [...new Set(carModels.map(model => model.category))];
+import { vehicleService } from '../services/vehicle.service';
+import { Link as RouterLink } from 'react-router-dom';
 
 const ModelCard = ({ model }) => {
-  const navigate = useNavigate();
-  
   return (
     <Card
+      elevation={2}
       sx={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
         borderRadius: 2,
-        overflow: 'hidden',
-        transition: 'transform 0.3s, box-shadow 0.3s',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease-in-out',
         '&:hover': {
-          transform: 'translateY(-5px)',
-          boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+          transform: 'translateY(-4px)',
+          boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
         },
+        direction: 'rtl'
       }}
+      component={RouterLink}
+      to={`/models/${model.slug}`}
     >
-      {model.popular && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bgcolor: 'secondary.main',
-            color: 'white',
-            zIndex: 2,
-            px: 1,
-            py: 0.5,
-            fontSize: '0.75rem',
-            fontWeight: 'bold',
-            borderBottomLeftRadius: 8,
-          }}
-        >
-          پرطرفدار
-        </Box>
-      )}
-      
-      {/* Card media and title - clickable as a whole */}
-      <CardActionArea 
-        onClick={() => navigate(`/models/${model.id}`)}
-        sx={{ flexGrow: 0 }}
-      >
-        <CardMedia
-          component="img"
-          height="160"
-          image={model.image || '/images/models/default-car.jpg'}
-          alt={model.name}
-          sx={{
-            objectFit: 'cover',
-          }}
-        />
-        
-        <CardContent sx={{ p: 2, pb: 1, direction: 'rtl' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold' }}>
-              {model.name}
-            </Typography>
+      <CardMedia
+        component="img"
+        height="200"
+        image={model.image || '/images/models/default-car.jpg'}
+        alt={model.name}
+        sx={{ 
+          objectFit: 'cover',
+          backgroundColor: '#f5f5f5'
+        }}
+      />
+      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+          <Typography variant="h6" component="h3" sx={{ fontWeight: 600, color: '#1976d2' }}>
+            {model.name}
+          </Typography>
+          {model.popular && (
             <Chip 
-              label={model.brand} 
+              label="محبوب" 
               size="small" 
-              color="primary"
-              sx={{ direction: 'rtl' }}
+              color="primary" 
+              variant="outlined"
+              icon={<StarIcon style={{ fontSize: 16 }} />}
             />
-          </Box>
-          
-          <Divider sx={{ mb: 1.5 }} />
-          
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <SpeedIcon fontSize="small" sx={{ ml: 0.5, color: 'text.secondary' }} />
-              <Typography variant="body2" color="text.secondary">
-                {model.engine}
-              </Typography>
-            </Box>
-            <Typography variant="body2" color="text.secondary">
-              {model.year}
-            </Typography>
-          </Box>
-        </CardContent>
-      </CardActionArea>
-      
-      {/* Description and actions - not part of the clickable area */}
-      <CardContent sx={{ flexGrow: 1, pt: 0, p: 2, direction: 'rtl' }}>
-        <Typography 
-          variant="body2" 
-          color="text.secondary"
-          sx={{ 
-            mb: 2,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            height: '3em',
-            textAlign: 'right',
-          }}
-        >
-          {model.description}
+          )}
+        </Box>
+        
+        <Typography color="text.secondary" variant="body2" sx={{ mb: 1.5 }}>
+          <BusinessIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'text-bottom' }} />
+          {model.manufacturer?.name}
         </Typography>
         
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 'auto' }}>
-          <Button 
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            سال: {model.year || 'نامشخص'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            موتور: {model.engine || 'نامشخص'}
+          </Typography>
+        </Box>
+        
+        {model.category && (
+          <Chip 
+            label={model.category} 
             size="small" 
             variant="outlined" 
-            color="primary"
-            sx={{ fontSize: '0.75rem' }}
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent triggering the CardActionArea click
-              navigate(`/products?model=${model.id}`);
-            }}
-          >
-            مشاهده قطعات
-          </Button>
-          <Chip
-            label={`${model.partsCount} قطعه`}
-            size="small"
-            color="primary"
-            variant="outlined"
-            sx={{ direction: 'rtl' }}
+            sx={{ mb: 1 }}
           />
-        </Box>
+        )}
+        
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: '0.875rem' }}>
+          {model.productsCount || 0} قطعه موجود
+        </Typography>
       </CardContent>
     </Card>
   );
 };
 
 const Models = () => {
-  // State for models
+  // State for models and manufacturers
   const [models, setModels] = useState([]);
+  const [manufacturers, setManufacturers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -390,41 +118,62 @@ const Models = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedType, setSelectedType] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
-  const [selectedSort, setSelectedSort] = useState('popular');
   const [showFilters, setShowFilters] = useState(false);
   
   const [page, setPage] = useState(1);
   const itemsPerPage = 9;
   const location = useLocation();
+
+  // Load data from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Load models and manufacturers
+        const [modelsData, manufacturersData] = await Promise.all([
+          vehicleService.getAllModels(),
+          vehicleService.getManufacturers()
+        ]);
+
+        setModels(modelsData);
+        setManufacturers(manufacturersData);
+      } catch (err) {
+        console.error('Error loading data:', err);
+        setError('خطا در بارگذاری اطلاعات');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
   
   // Set initial brand filter from URL params if coming from brand page
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const brandParam = params.get('brand');
     
-    // Map brand slugs to brand names (this would come from API in real app)
+    // Map brand slugs to brand names
     const brandMapping = {
       'saipa': 'سایپا',
-      'irankhodro': 'ایران خودرو',
-      'mvm': 'ام وی ام',
-      'bahmanmotor': 'بهمن موتور',
-      'kia': 'کیا',
-      'hyundai': 'هیوندای',
-      'renault': 'رنو',
-      'geely': 'جیلی'
+      'ikco': 'ایران خودرو',
     };
     
     if (brandParam && brandMapping[brandParam]) {
       setSelectedBrand(brandMapping[brandParam]);
     }
   }, [location]);
+
+  // Get unique categories from models
+  const categories = [...new Set(models.map(model => model.category).filter(Boolean))];
   
   // Filter models based on search and filters
-  const filteredModels = carModels.filter((model) => {
+  const filteredModels = models.filter((model) => {
     const matchesSearch = model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         model.brand.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesBrand = selectedBrand ? model.brand === selectedBrand : true;
+                         model.manufacturer?.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesBrand = selectedBrand ? model.manufacturer?.name === selectedBrand : true;
     const matchesType = selectedType ? model.category === selectedType : true;
     
     return matchesSearch && matchesBrand && matchesType;
@@ -447,7 +196,25 @@ const Models = () => {
     setSelectedType('');
     setSearchQuery('');
   };
-  
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress size={60} />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert severity="error">{error}</Alert>
+      </Container>
+    );
+  }
+
   return (
     <Box sx={{ 
       background: 'linear-gradient(to bottom, #f5f7fa, #ffffff)',
@@ -553,8 +320,13 @@ const Models = () => {
                       onChange={(e) => setSelectedBrand(e.target.value)}
                     >
                       <MenuItem value="">همه برندها</MenuItem>
-                      {brands.map((brand) => (
-                        <MenuItem key={brand} value={brand}>{brand}</MenuItem>
+                      {manufacturers.map((manufacturer) => (
+                        <MenuItem key={manufacturer._id} value={manufacturer.name}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <BusinessIcon sx={{ mr: 1, fontSize: 16 }} />
+                            {manufacturer.name}
+                          </Box>
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>

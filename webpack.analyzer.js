@@ -8,6 +8,6 @@ module.exports = {
       openAnalyzer: false,
       generateStatsFile: true,
       statsFilename: 'bundle-stats.json',
-    })
-  ]
-}; 
+    }),
+  ],
+};

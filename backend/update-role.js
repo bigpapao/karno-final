@@ -11,8 +11,8 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ['user', 'admin'],
-    default: 'user'
-  }
+    default: 'user',
+  },
 });
 
 // Create model
@@ -24,21 +24,21 @@ async function updateUserRole(email, newRole) {
     // Connect to MongoDB
     await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/test');
     console.log('Connected to MongoDB');
-    
+
     // Find user by email
     const user = await User.findOne({ email });
-    
+
     if (!user) {
       console.error(`User with email ${email} not found`);
       return;
     }
-    
+
     // Update role
     user.role = newRole;
     await user.save();
-    
+
     console.log(`User ${email} role updated to ${newRole}`);
-    
+
     // Print updated user info
     console.log('Updated user:', user);
   } catch (error) {
@@ -60,4 +60,4 @@ if (!email || !newRole) {
 }
 
 // Execute the update
-updateUserRole(email, newRole); 
+updateUserRole(email, newRole);

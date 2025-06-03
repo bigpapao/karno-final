@@ -22,6 +22,13 @@ import {
   Badge,
   Tooltip,
   ListItemButton,
+  TextField,
+  InputAdornment,
+  Chip,
+  alpha,
+  Collapse,
+  ListSubheader,
+  Button,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -35,12 +42,19 @@ import {
   Person as PersonIcon,
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
+  Search as SearchIcon,
+  ExpandLess,
+  ExpandMore,
+  Add as AddIcon,
+  Analytics as AnalyticsIcon,
+  Report as ReportIcon,
+  Store as StoreIcon,
 } from '@mui/icons-material';
 import { logout } from '../store/slices/authSlice';
 import { useDirection } from '../contexts/DirectionContext';
 import { useDirectionalValue } from '../utils/directionComponentUtils';
 
-const drawerWidth = 240;
+const drawerWidth = 280; // Increased width for better navigation
 
 const AdminLayout = () => {
   const theme = useTheme();
@@ -55,6 +69,8 @@ const AdminLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [expandedMenus, setExpandedMenus] = useState({});
 
   // Get directional values based on current direction
   const drawerAnchor = useDirectionalValue('right', 'left');
@@ -87,92 +103,302 @@ const AdminLayout = () => {
     handleMenuClose();
   };
 
+  const handleExpandMenu = (menuKey) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [menuKey]: !prev[menuKey]
+    }));
+  };
+
+  // Enhanced menu structure with categories and sub-items
   const menuItems = [
-    { text: 'داشبورد', icon: <DashboardIcon />, path: '/admin' },
-    { text: 'محصولات', icon: <ProductsIcon />, path: '/admin/products' },
-    { text: 'سفارشات', icon: <OrdersIcon />, path: '/admin/orders' },
-    { text: 'کاربران', icon: <UsersIcon />, path: '/admin/users' },
-    { text: 'دسته‌بندی‌ها', icon: <CategoriesIcon />, path: '/admin/categories' },
-    { text: 'برندها', icon: <BrandsIcon />, path: '/admin/brands' },
-    { text: 'تنظیمات', icon: <SettingsIcon />, path: '/admin/settings' },
+    { 
+      text: 'داشبورد', 
+      icon: <DashboardIcon />, 
+      path: '/admin',
+      badge: null,
+      category: 'main'
+    },
+    { 
+      text: 'فروشگاه', 
+      icon: <StoreIcon />, 
+      category: 'store',
+      expandable: true,
+      subItems: [
+        { text: 'محصولات', icon: <ProductsIcon />, path: '/admin/products', badge: '1,254' },
+        { text: 'دسته‌بندی‌ها', icon: <CategoriesIcon />, path: '/admin/categories', badge: '24' },
+        { text: 'برندها', icon: <BrandsIcon />, path: '/admin/brands', badge: '156' },
+      ]
+    },
+    { 
+      text: 'سفارشات', 
+      icon: <OrdersIcon />, 
+      path: '/admin/orders',
+      badge: '12',
+      badgeColor: 'error',
+      category: 'orders'
+    },
+    { 
+      text: 'کاربران', 
+      icon: <UsersIcon />, 
+      path: '/admin/users',
+      badge: '2,341',
+      category: 'users'
+    },
+    { 
+      text: 'گزارشات', 
+      icon: <AnalyticsIcon />, 
+      category: 'reports',
+      expandable: true,
+      subItems: [
+        { text: 'گزارش فروش', icon: <ReportIcon />, path: '/admin/reports/sales' },
+        { text: 'گزارش موجودی', icon: <ProductsIcon />, path: '/admin/reports/inventory' },
+        { text: 'گزارش کاربران', icon: <UsersIcon />, path: '/admin/reports/users' },
+      ]
+    },
+    { 
+      text: 'تنظیمات', 
+      icon: <SettingsIcon />, 
+      path: '/admin/settings',
+      category: 'settings'
+    },
   ];
 
-  // Mock notifications
+  // Enhanced notifications with more details
   const notifications = [
-    { id: 1, text: 'سفارش جدید دریافت شد', read: false },
-    { id: 2, text: 'محصول X به اتمام رسیده است', read: false },
-    { id: 3, text: 'کاربر جدید ثبت نام کرد', read: true },
+    { id: 1, text: 'سفارش جدید دریافت شد', read: false, type: 'order', time: '5 دقیقه پیش' },
+    { id: 2, text: 'محصول X به اتمام رسیده است', read: false, type: 'inventory', time: '10 دقیقه پیش' },
+    { id: 3, text: 'کاربر جدید ثبت نام کرد', read: true, type: 'user', time: '1 ساعت پیش' },
+    { id: 4, text: 'پرداخت موفق انجام شد', read: true, type: 'payment', time: '2 ساعت پیش' },
   ];
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  // Filter menu items based on search
+  const filteredMenuItems = menuItems.filter(item => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    
+    // Check main item
+    if (item.text.toLowerCase().includes(searchLower)) return true;
+    
+    // Check sub items
+    if (item.subItems) {
+      return item.subItems.some(subItem => 
+        subItem.text.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return false;
+  });
+
   const drawer = (
-    <div>
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <Box sx={{ p: 3, borderBottom: `1px solid ${theme.palette.divider}` }}>
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, textAlign: 'center' }}>
           پنل مدیریت کارنو
         </Typography>
-        <Avatar 
-          alt={user?.name || 'Admin'} 
-          src={user?.avatar} 
-          sx={{ width: 64, height: 64, mb: 1 }}
+        <Box sx={{ display: 'flex', alignItems: 'center', flexDirection: 'column', mb: 2 }}>
+          <Avatar 
+            alt={user?.name || 'Admin'} 
+            src={user?.avatar} 
+            sx={{ width: 64, height: 64, mb: 1, border: `3px solid ${theme.palette.primary.main}` }}
+          />
+          <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+            {user?.name || 'مدیر سیستم'}
+          </Typography>
+          <Chip 
+            label="مدیر" 
+            size="small" 
+            color="primary" 
+            variant="outlined"
+            sx={{ mt: 0.5 }}
+          />
+        </Box>
+        
+        {/* Search */}
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="جستجو در منو..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" />
+              </InputAdornment>
+            ),
+            sx: { direction: 'rtl' }
+          }}
+          sx={{ mt: 1 }}
         />
-        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-          {user?.name || 'مدیر سیستم'}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {user?.email || 'admin@karno.ir'}
-        </Typography>
       </Box>
-      <Divider />
-      <List sx={{ direction: 'rtl' }}>
-        {menuItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <ListItem key={item.text} disablePadding>
-              <ListItemButton
-                component={RouterLink}
-                to={item.path}
-                onClick={isMobile ? handleDrawerToggle : undefined}
-                selected={isActive}
-                sx={{
-                  '&.Mui-selected': {
-                    bgcolor: 'primary.light',
-                    color: 'primary.main',
-                    '& .MuiListItemIcon-root': {
-                      color: 'primary.main',
-                    },
-                    '&:hover': {
-                      bgcolor: 'primary.light',
-                    },
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.text} />
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
-      </List>
-      <Divider sx={{ mt: 2 }} />
-      <List sx={{ direction: 'rtl' }}>
+
+      {/* Navigation */}
+      <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+        <List sx={{ direction: 'rtl', py: 1 }}>
+          {filteredMenuItems.map((item) => {
+            if (item.expandable) {
+              const isExpanded = Boolean(expandedMenus[item.text] || searchTerm);
+              return (
+                <React.Fragment key={item.text}>
+                  <ListSubheader 
+                    component="div" 
+                    sx={{ 
+                      bgcolor: 'transparent', 
+                      fontWeight: 'bold',
+                      color: theme.palette.text.primary,
+                      direction: 'rtl',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.04),
+                      }
+                    }}
+                    onClick={() => handleExpandMenu(item.text)}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {item.icon}
+                      {item.text}
+                    </Box>
+                    {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                  </ListSubheader>
+                  <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding>
+                      {item.subItems?.map((subItem) => {
+                        const isActive = location.pathname === subItem.path;
+                        return (
+                          <ListItem key={subItem.text} disablePadding sx={{ pl: 2 }}>
+                            <ListItemButton
+                              component={RouterLink}
+                              to={subItem.path}
+                              onClick={isMobile ? handleDrawerToggle : undefined}
+                              selected={isActive}
+                              sx={{
+                                borderRadius: 1,
+                                mx: 1,
+                                '&.Mui-selected': {
+                                  bgcolor: alpha(theme.palette.primary.main, 0.12),
+                                  color: 'primary.main',
+                                  '& .MuiListItemIcon-root': {
+                                    color: 'primary.main',
+                                  },
+                                  '&:hover': {
+                                    bgcolor: alpha(theme.palette.primary.main, 0.16),
+                                  },
+                                },
+                                '&:hover': {
+                                  bgcolor: alpha(theme.palette.primary.main, 0.04),
+                                }
+                              }}
+                            >
+                              <ListItemIcon sx={{ minWidth: 36 }}>{subItem.icon}</ListItemIcon>
+                              <ListItemText 
+                                primary={subItem.text}
+                                primaryTypographyProps={{ fontSize: '0.875rem' }}
+                              />
+                              {subItem.badge && (
+                                <Chip 
+                                  label={subItem.badge} 
+                                  size="small" 
+                                  variant="outlined"
+                                  sx={{ fontSize: '0.75rem', height: 20 }}
+                                />
+                              )}
+                            </ListItemButton>
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+                  </Collapse>
+                </React.Fragment>
+              );
+            } else {
+              const isActive = location.pathname === item.path;
+              return (
+                <ListItem key={item.text} disablePadding>
+                  <ListItemButton
+                    component={RouterLink}
+                    to={item.path}
+                    onClick={isMobile ? handleDrawerToggle : undefined}
+                    selected={isActive}
+                    sx={{
+                      borderRadius: 1,
+                      mx: 1,
+                      '&.Mui-selected': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.12),
+                        color: 'primary.main',
+                        '& .MuiListItemIcon-root': {
+                          color: 'primary.main',
+                        },
+                        '&:hover': {
+                          bgcolor: alpha(theme.palette.primary.main, 0.16),
+                        },
+                      },
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.04),
+                      }
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.text} />
+                    {item.badge && (
+                      <Badge 
+                        badgeContent={item.badge} 
+                        color={item.badgeColor || 'primary'}
+                        max={999}
+                      />
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              );
+            }
+          })}
+        </List>
+      </Box>
+
+      {/* Footer */}
+      <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
         <ListItem disablePadding>
-          <ListItemButton onClick={handleLogout}>
-            <ListItemIcon sx={{ minWidth: 40 }}>
+          <ListItemButton 
+            onClick={handleLogout}
+            sx={{
+              borderRadius: 1,
+              color: theme.palette.error.main,
+              '&:hover': {
+                bgcolor: alpha(theme.palette.error.main, 0.04),
+              }
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
               <LogoutIcon />
             </ListItemIcon>
             <ListItemText primary="خروج" />
           </ListItemButton>
         </ListItem>
-      </List>
-    </div>
+      </Box>
+    </Box>
   );
 
   // Get current page title
   const getCurrentPageTitle = () => {
+    // Check main items
     const currentItem = menuItems.find(item => item.path === location.pathname);
-    return currentItem ? currentItem.text : 'پنل مدیریت';
+    if (currentItem) return currentItem.text;
+    
+    // Check sub items
+    for (const item of menuItems) {
+      if (item.subItems) {
+        const subItem = item.subItems.find(sub => sub.path === location.pathname);
+        if (subItem) return subItem.text;
+      }
+    }
+    
+    return 'پنل مدیریت';
   };
 
   return (
@@ -184,177 +410,216 @@ const AdminLayout = () => {
           [marginProp]: { md: `${drawerWidth}px` },
           bgcolor: 'background.paper',
           color: 'text.primary',
-          boxShadow: 1,
+          boxShadow: `0 1px 3px ${alpha(theme.palette.common.black, 0.12)}`,
+          borderBottom: `1px solid ${theme.palette.divider}`,
         }}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge={isRTL ? "end" : "start"}
-            onClick={handleDrawerToggle}
-            sx={{ [marginStartProp]: 2, display: { md: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            {getCurrentPageTitle()}
-          </Typography>
-          
-          <Tooltip title="اعلان‌ها">
-            <IconButton 
-              color="inherit" 
-              onClick={handleNotificationOpen}
-              sx={{ mx: 1 }}
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <IconButton
+              color="inherit"
+              edge={isRTL ? "end" : "start"}
+              onClick={handleDrawerToggle}
+              sx={{ [marginStartProp]: 2, display: { md: 'none' } }}
             >
-              <Badge badgeContent={unreadCount} color="error">
-                <NotificationsIcon />
-              </Badge>
+              <MenuIcon />
             </IconButton>
-          </Tooltip>
-          
-          <IconButton
-            onClick={handleMenuOpen}
-            size="small"
-            sx={{ [marginStartProp]: 1 }}
-            aria-controls="menu-appbar"
-            aria-haspopup="true"
-          >
-            <Avatar 
-              alt={user?.name || 'Admin'} 
-              src={user?.avatar}
-              sx={{ width: 40, height: 40 }}
-            />
-          </IconButton>
-          
-          <Menu
-            id="menu-appbar"
-            anchorEl={anchorEl}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: isRTL ? 'left' : 'right',
-            }}
-            keepMounted
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: isRTL ? 'left' : 'right',
-            }}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem component={RouterLink} to="/profile" onClick={handleMenuClose}>
-              <ListItemIcon>
-                <PersonIcon fontSize="small" />
-              </ListItemIcon>
-              <Typography textAlign="center">پروفایل</Typography>
-            </MenuItem>
-            <MenuItem component={RouterLink} to="/admin/settings" onClick={handleMenuClose}>
-              <ListItemIcon>
-                <SettingsIcon fontSize="small" />
-              </ListItemIcon>
-              <Typography textAlign="center">تنظیمات</Typography>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <ListItemIcon>
-                <LogoutIcon fontSize="small" />
-              </ListItemIcon>
-              <Typography textAlign="center">خروج</Typography>
-            </MenuItem>
-          </Menu>
-          
-          <Menu
-            id="notifications-menu"
-            anchorEl={notificationAnchorEl}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: isRTL ? 'left' : 'right',
-            }}
-            keepMounted
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: isRTL ? 'left' : 'right',
-            }}
-            open={Boolean(notificationAnchorEl)}
-            onClose={handleNotificationClose}
-            PaperProps={{
-              style: {
-                maxHeight: 300,
-                width: '300px',
-              },
-            }}
-          >
-            <Typography variant="subtitle1" sx={{ p: 2, fontWeight: 'bold' }}>
-              اعلان‌ها
-            </Typography>
-            <Divider />
-            {notifications.length > 0 ? (
-              notifications.map((notification) => (
-                <MenuItem 
-                  key={notification.id} 
-                  onClick={handleNotificationClose}
-                  sx={{ 
-                    whiteSpace: 'normal',
-                    direction: 'rtl',
-                    bgcolor: notification.read ? 'transparent' : 'action.hover'
-                  }}
-                >
-                  <Typography variant="body2">{notification.text}</Typography>
-                </MenuItem>
-              ))
-            ) : (
-              <MenuItem onClick={handleNotificationClose}>
-                <Typography variant="body2">اعلان جدیدی وجود ندارد</Typography>
-              </MenuItem>
-            )}
-            <Divider />
-            <MenuItem onClick={handleNotificationClose} sx={{ justifyContent: 'center' }}>
-              <Typography variant="body2" color="primary">
-                مشاهده همه اعلان‌ها
+            
+            <Box>
+              <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+                {getCurrentPageTitle()}
               </Typography>
-            </MenuItem>
-          </Menu>
+              <Typography variant="body2" color="text.secondary">
+                مدیریت و کنترل سیستم
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Quick Actions */}
+            <Tooltip title="افزودن محصول جدید">
+              <IconButton 
+                color="primary" 
+                onClick={() => navigate('/admin/products')}
+                sx={{ 
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
+                }}
+              >
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
+
+            {/* Notifications */}
+            <Tooltip title="اعلان‌ها">
+              <IconButton onClick={handleNotificationOpen}>
+                <Badge badgeContent={unreadCount} color="error">
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+
+            {/* Profile Menu */}
+            <Tooltip title="پروفایل کاربری">
+              <IconButton onClick={handleMenuOpen}>
+                <Avatar 
+                  alt={user?.name || 'Admin'} 
+                  src={user?.avatar}
+                  sx={{ width: 32, height: 32 }}
+                />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Toolbar>
       </AppBar>
-      
+
+      {/* Navigation Drawer */}
       <Box
         component="nav"
         sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
       >
         <Drawer
-          variant={isMobile ? 'temporary' : 'permanent'}
-          open={isMobile ? mobileOpen : true}
+          variant="temporary"
+          anchor={drawerAnchor}
+          open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better open performance on mobile
-          }}
+          ModalProps={{ keepMounted: true }}
           sx={{
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
+            display: { xs: 'block', md: 'none' },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
               width: drawerWidth,
+              borderRight: 'none',
+              boxShadow: theme.shadows[8]
             },
           }}
-          anchor={drawerAnchor}
+        >
+          {drawer}
+        </Drawer>
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              borderRight: 'none',
+              borderLeft: `1px solid ${theme.palette.divider}`,
+            },
+          }}
+          open
         >
           {drawer}
         </Drawer>
       </Box>
-      
+
+      {/* Main Content */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
           width: { md: `calc(100% - ${drawerWidth}px)` },
           minHeight: '100vh',
-          bgcolor: 'background.default',
+          bgcolor: alpha(theme.palette.grey[50], 0.4),
         }}
       >
         <Toolbar />
-        <Container maxWidth="lg" sx={{ mt: 2 }}>
+        <Container maxWidth={false} sx={{ py: 3 }}>
           <Outlet />
         </Container>
       </Box>
+
+      {/* Profile Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <MenuItem onClick={handleMenuClose}>
+          <ListItemIcon>
+            <PersonIcon fontSize="small" />
+          </ListItemIcon>
+          پروفایل
+        </MenuItem>
+        <MenuItem onClick={handleMenuClose}>
+          <ListItemIcon>
+            <SettingsIcon fontSize="small" />
+          </ListItemIcon>
+          تنظیمات
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
+          <ListItemIcon>
+            <LogoutIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          خروج
+        </MenuItem>
+      </Menu>
+
+      {/* Notifications Menu */}
+      <Menu
+        anchorEl={notificationAnchorEl}
+        open={Boolean(notificationAnchorEl)}
+        onClose={handleNotificationClose}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        PaperProps={{
+          sx: { width: 320, maxHeight: 400 }
+        }}
+      >
+        <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            اعلان‌ها
+          </Typography>
+        </Box>
+        {notifications.map((notification) => (
+          <MenuItem 
+            key={notification.id} 
+            onClick={handleNotificationClose}
+            sx={{ 
+              py: 1.5,
+              borderBottom: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+              '&:last-child': { borderBottom: 'none' }
+            }}
+          >
+            <Box sx={{ width: '100%' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: notification.read ? 'normal' : 'bold',
+                    direction: 'rtl'
+                  }}
+                >
+                  {notification.text}
+                </Typography>
+                {!notification.read && (
+                  <Box 
+                    sx={{ 
+                      width: 8, 
+                      height: 8, 
+                      borderRadius: '50%', 
+                      bgcolor: 'error.main',
+                      ml: 1,
+                      mt: 0.5
+                    }} 
+                  />
+                )}
+              </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ direction: 'rtl' }}>
+                {notification.time}
+              </Typography>
+            </Box>
+          </MenuItem>
+        ))}
+        <Box sx={{ p: 1 }}>
+          <Button fullWidth size="small">
+            مشاهده همه اعلان‌ها
+          </Button>
+        </Box>
+      </Menu>
     </Box>
   );
 };

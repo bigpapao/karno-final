@@ -51,15 +51,15 @@ export const getOrders = async (req, res, next) => {
 export const getUserOrders = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    
+
     const orders = await Order.find({ user: userId })
       .sort({ createdAt: -1 })
       .select('orderNumber trackingCode status totalAmount createdAt items');
-    
+
     res.status(200).json({
       status: 'success',
       results: orders.length,
-      data: orders
+      data: orders,
     });
   } catch (error) {
     next(error);
@@ -73,16 +73,16 @@ export const getOrderById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user._id;
-    
+
     const order = await Order.findOne({ _id: id, user: userId });
-    
+
     if (!order) {
       return next(new AppError('Order not found', 404));
     }
-    
+
     res.status(200).json({
       status: 'success',
-      data: order
+      data: order,
     });
   } catch (error) {
     next(error);
@@ -94,18 +94,20 @@ export const getOrderById = async (req, res, next) => {
 // @access  Private/Public (supports both guest and authenticated users)
 export const createOrder = async (req, res, next) => {
   try {
-    const { items, totalAmount, shippingInfo, paymentMethod } = req.body;
+    const {
+      items, totalAmount, shippingInfo, paymentMethod,
+    } = req.body;
     const userId = req.user._id;
-    
+
     if (!items || !Array.isArray(items) || items.length === 0) {
       return next(new AppError('Order must contain at least one item', 400));
     }
-    
+
     // Basic validation
     if (!shippingInfo || !paymentMethod) {
       return next(new AppError('Shipping information and payment method are required', 400));
     }
-    
+
     // Create the order
     const order = new Order({
       user: userId,
@@ -117,29 +119,29 @@ export const createOrder = async (req, res, next) => {
       paymentMethod,
       status: 'pending',
     });
-    
+
     // Save the order
     await order.save();
-    
+
     // Clear the user's cart after successful order
     await Cart.findOneAndUpdate(
       { user: userId },
-      { $set: { items: [], totalItems: 0, totalPrice: 0 } }
+      { $set: { items: [], totalItems: 0, totalPrice: 0 } },
     );
-    
+
     // Update user's shipping info if needed
     if (req.body.saveShippingInfo) {
       await User.findByIdAndUpdate(userId, {
-        $set: { 'shippingInfo': shippingInfo }
+        $set: { shippingInfo },
       });
     }
-    
+
     res.status(201).json({
       status: 'success',
       message: 'Order created successfully',
       orderId: order._id,
       orderNumber: order.orderNumber,
-      trackingCode: order.trackingCode
+      trackingCode: order.trackingCode,
     });
   } catch (error) {
     next(error);
@@ -477,17 +479,17 @@ export const bulkUpdateOrderStatus = async (req, res, next) => {
 export const getOrderByTracking = async (req, res, next) => {
   try {
     const { tracking } = req.params;
-    
+
     if (!tracking) {
       return next(new AppError('Tracking number is required', 400));
     }
-    
+
     const order = await Order.findOne({ trackingNumber: tracking });
-    
+
     if (!order) {
       return next(new AppError('Order not found', 404));
     }
-    
+
     // Return limited data for public access
     const publicOrderData = {
       trackingNumber: order.trackingNumber,
@@ -495,12 +497,12 @@ export const getOrderByTracking = async (req, res, next) => {
       createdAt: order.createdAt,
       isDelivered: order.isDelivered,
       deliveredAt: order.deliveredAt,
-      estimatedDelivery: order.estimatedDelivery
+      estimatedDelivery: order.estimatedDelivery,
     };
-    
+
     res.status(200).json({
       success: true,
-      data: publicOrderData
+      data: publicOrderData,
     });
   } catch (error) {
     next(error);
@@ -513,28 +515,28 @@ export const getOrderByTracking = async (req, res, next) => {
 export const verifyGuestOrder = async (req, res, next) => {
   try {
     const { email, orderId } = req.body;
-    
+
     if (!email || !orderId) {
       return next(new AppError('Email and order ID are required', 400));
     }
-    
+
     const order = await Order.findOne({
       _id: orderId,
       isGuest: true,
-      guestEmail: email
+      guestEmail: email,
     });
-    
+
     if (!order) {
       return next(new AppError('Order not found or access denied', 404));
     }
-    
+
     // Generate a temporary access token for this guest to view their order
     const guestAccessToken = await generateGuestOrderToken(orderId, email);
-    
+
     res.status(200).json({
       success: true,
       accessToken: guestAccessToken,
-      expiresIn: '1h'
+      expiresIn: '1h',
     });
   } catch (error) {
     next(error);

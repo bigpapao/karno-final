@@ -1,6 +1,6 @@
 /**
  * Application Configuration
- * 
+ *
  * Central configuration file for the application.
  * Values can be overridden using environment variables.
  */
@@ -81,7 +81,7 @@ export {
   addressValidation,
   emailConfig,
   smsConfig,
-  redisConfig
+  redisConfig,
 };
 
 // Default export for backward compatibility
@@ -96,5 +96,5 @@ export default {
   addressValidation,
   emailConfig,
   smsConfig,
-  redisConfig
-}; 
+  redisConfig,
+};

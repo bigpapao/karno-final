@@ -13,7 +13,7 @@ const transporter = nodemailer.createTransport({
   defaults: {
     charset: 'UTF-8',
     encoding: 'quoted-printable',
-  }
+  },
 });
 
 const sendVerificationEmail = async (email, token) => {

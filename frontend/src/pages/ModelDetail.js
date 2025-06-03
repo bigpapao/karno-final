@@ -24,7 +24,11 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  CircularProgress
+  CircularProgress,
+  Alert,
+  Pagination,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   NavigateNext as NavigateNextIcon,
@@ -38,79 +42,32 @@ import {
   Settings as PartsIcon,
   Info as InfoIcon,
   Check as CompatibleIcon,
+  Home as HomeIcon,
+  ArrowBack as ArrowBackIcon,
+  ShoppingCart as CartIcon,
+  Business as BrandIcon,
+  Category as CategoryIcon,
+  AttachMoney as AttachMoneyIcon,
+  LocalGasStation as EngineIcon,
+  CalendarToday as ModelYearIcon,
 } from '@mui/icons-material';
-import ProductCard from '../components/ProductCard';
+import { vehicleService } from '../services/vehicle.service';
+import { productService } from '../services/product.service';
 
-// Sample car models data (this would come from your API)
-const carModels = [
-  // سایپا
-  {
-    id: 1,
-    name: 'پراید 111',
-    brand: 'سایپا',
-    brandId: 1,
-    brandSlug: 'saipa',
-    image: '/images/models/pride111.jpg',
-    year: '1398-1401',
-    engine: '1.3 لیتر',
-    partsCount: 450,
-    popular: true,
-    description: 'پراید 111 یکی از پرفروش‌ترین خودروهای ایران با قطعات فراوان در بازار است.',
-    category: 'هاچبک',
-    specifications: {
-      engineSize: '1.3 لیتر',
-      power: '63 اسب بخار',
-      transmission: 'دستی 5 سرعته',
-      fuelType: 'بنزین',
-      bodyType: 'هاچبک',
-      seatingCapacity: '4 نفر',
-      length: '3800 میلی‌متر',
-      width: '1600 میلی‌متر',
-      height: '1460 میلی‌متر',
-      wheelbase: '2380 میلی‌متر',
-    },
-    commonIssues: [
-      'مشکلات سیستم خنک‌کننده',
-      'خرابی دینام',
-      'فرسودگی سیستم تعلیق',
-      'مشکلات برقی',
-      'نشتی روغن',
-    ],
-  },
-  {
-    id: 8,
-    name: 'سمند',
-    brand: 'ایران خودرو',
-    brandId: 2,
-    brandSlug: 'irankhodro',
-    image: '/images/models/samand.jpg',
-    year: '1388-1402',
-    engine: '1.7 لیتر',
-    partsCount: 470,
-    popular: true,
-    description: 'سمند اولین خودروی ملی ایران که توسط ایران خودرو طراحی و تولید شده است.',
-    category: 'سدان',
-    specifications: {
-      engineSize: '1.7 لیتر',
-      power: '100 اسب بخار',
-      transmission: 'دستی 5 سرعته',
-      fuelType: 'بنزین',
-      bodyType: 'سدان',
-      seatingCapacity: '5 نفر',
-      length: '4500 میلی‌متر',
-      width: '1700 میلی‌متر',
-      height: '1460 میلی‌متر',
-      wheelbase: '2670 میلی‌متر',
-    },
-    commonIssues: [
-      'مشکلات جعبه دنده',
-      'ایرادات سیستم برقی',
-      'نشتی روغن موتور',
-      'مشکلات سیستم تعلیق',
-      'ایرادات سیستم سوخت‌رسانی',
-    ],
-  },
-];
+// TabPanel component for handling tabs
+function TabPanel({ children, value, index, ...other }) {
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`model-tabpanel-${index}`}
+      aria-labelledby={`model-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+}
 
 // Sample parts data (this would come from your API)
 const partsSampleData = [
@@ -305,46 +262,130 @@ const categories = [...new Set(partsSampleData.map(part => part.category))];
 const ModelDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [currentTab, setCurrentTab] = useState(0);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedBrand, setSelectedBrand] = useState('');
-  const [sortBy, setSortBy] = useState('popular');
-  
-  // Find the model by ID
-  const model = carModels.find(m => m.id === parseInt(id)) || carModels[0];
-  
-  // Filter parts for this model
-  const modelParts = partsSampleData.filter(part => part.modelId === model.id);
-  
-  // Apply filters
-  const filteredParts = modelParts.filter(part => {
-    const matchesCategory = selectedCategory ? part.category === selectedCategory : true;
-    const matchesBrand = selectedBrand ? part.brand === selectedBrand : true;
-    return matchesCategory && matchesBrand;
+
+  // State management
+  const [model, setModel] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [tabValue, setTabValue] = useState(0);
+
+  // Product filtering and pagination
+  const [filters, setFilters] = useState({
+    category: '',
+    priceRange: 'all',
+    availability: 'all',
+    sort: 'featured'
   });
   
-  // Sort parts
-  const sortedParts = [...filteredParts].sort((a, b) => {
-    if (sortBy === 'price-low') return a.price - b.price;
-    if (sortBy === 'price-high') return b.price - a.price;
-    if (sortBy === 'rating') return b.rating - a.rating;
-    // Default: popular (by review count)
-    return b.reviewCount - a.reviewCount;
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 12,
+    total: 0,
+    pages: 0
   });
-  
-  // Get unique brands for this model's parts
-  const partBrands = [...new Set(modelParts.map(part => part.brand))];
-  
+
+  // Fetch model data
+  useEffect(() => {
+    const fetchModel = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const modelData = await vehicleService.getModelById(id);
+        setModel(modelData);
+      } catch (err) {
+        console.error('Error fetching model:', err);
+        setError('خطا در بارگذاری اطلاعات مدل خودرو');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchModel();
+    }
+  }, [id]);
+
+  // Fetch products for this model
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (!model) return;
+      
+      try {
+        setProductsLoading(true);
+        
+        const params = {
+          page: pagination.page,
+          limit: pagination.limit,
+          ...filters
+        };
+        
+        const result = await productService.getProductsByModel(model.slug || id, params);
+        
+        setProducts(result.products || []);
+        setPagination(prev => ({
+          ...prev,
+          total: result.pagination?.total || 0,
+          pages: result.pagination?.pages || 0
+        }));
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError('خطا در بارگذاری محصولات');
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [model, id, pagination.page, pagination.limit, filters]);
+
+  // Event handlers
   const handleTabChange = (event, newValue) => {
-    setCurrentTab(newValue);
+    setTabValue(newValue);
   };
-  
-  const handleClearFilters = () => {
-    setSelectedCategory('');
-    setSelectedBrand('');
-    setSortBy('popular');
+
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
   };
-  
+
+  const handlePageChange = (event, page) => {
+    setPagination(prev => ({ ...prev, page }));
+    // Scroll to top of products section
+    const productsSection = document.getElementById('products-section');
+    if (productsSection) {
+      productsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress size={60} />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (error || !model) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error || 'مدل خودرو یافت نشد'}
+        </Alert>
+        <Button variant="contained" onClick={() => navigate('/models')}>
+          بازگشت به لیست مدل‌ها
+        </Button>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Breadcrumbs */}
@@ -360,10 +401,10 @@ const ModelDetail = () => {
         </Link>
         <Link 
           component={RouterLink} 
-          to={`/brands/${model.brandSlug}`} 
+          to={`/brands/${model.manufacturer.slug}`} 
           color="inherit"
         >
-          {model.brand}
+          {model.manufacturer.name}
         </Link>
         <Typography color="text.primary">{model.name}</Typography>
       </Breadcrumbs>
@@ -449,7 +490,7 @@ const ModelDetail = () => {
       {/* Tabs for different sections */}
       <Paper sx={{ mb: 4, borderRadius: 2 }}>
         <Tabs 
-          value={currentTab} 
+          value={tabValue} 
           onChange={handleTabChange}
           variant="fullWidth"
           textColor="primary"
@@ -465,7 +506,7 @@ const ModelDetail = () => {
       {/* Tab Content */}
       <Box sx={{ mb: 4 }}>
         {/* Parts Tab */}
-        {currentTab === 0 && (
+        {tabValue === 0 && (
           <>
             {/* Filters */}
             <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
@@ -475,9 +516,9 @@ const ModelDetail = () => {
                     <InputLabel id="category-select-label">دسته‌بندی قطعات</InputLabel>
                     <Select
                       labelId="category-select-label"
-                      value={selectedCategory}
+                      value={filters.category}
                       label="دسته‌بندی قطعات"
-                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      onChange={(e) => handleFilterChange('category', e.target.value)}
                     >
                       <MenuItem value="">همه دسته‌بندی‌ها</MenuItem>
                       {categories.map((category) => (
@@ -489,17 +530,32 @@ const ModelDetail = () => {
                 
                 <Grid item xs={12} md={3}>
                   <FormControl fullWidth sx={{ direction: 'rtl' }}>
-                    <InputLabel id="brand-select-label">برند قطعات</InputLabel>
+                    <InputLabel id="price-range-select-label">محدوده قیمت</InputLabel>
                     <Select
-                      labelId="brand-select-label"
-                      value={selectedBrand}
-                      label="برند قطعات"
-                      onChange={(e) => setSelectedBrand(e.target.value)}
+                      labelId="price-range-select-label"
+                      value={filters.priceRange}
+                      label="محدوده قیمت"
+                      onChange={(e) => handleFilterChange('priceRange', e.target.value)}
                     >
-                      <MenuItem value="">همه برندها</MenuItem>
-                      {partBrands.map((brand) => (
-                        <MenuItem key={brand} value={brand}>{brand}</MenuItem>
-                      ))}
+                      <MenuItem value="all">همه قیمت‌ها</MenuItem>
+                      <MenuItem value="low">قیمت کم</MenuItem>
+                      <MenuItem value="high">قیمت زیاد</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                
+                <Grid item xs={12} md={3}>
+                  <FormControl fullWidth sx={{ direction: 'rtl' }}>
+                    <InputLabel id="availability-select-label">موجودی</InputLabel>
+                    <Select
+                      labelId="availability-select-label"
+                      value={filters.availability}
+                      label="موجودی"
+                      onChange={(e) => handleFilterChange('availability', e.target.value)}
+                    >
+                      <MenuItem value="all">همه موجودی‌ها</MenuItem>
+                      <MenuItem value="inStock">موجود</MenuItem>
+                      <MenuItem value="outOfStock">ناموجود</MenuItem>
                     </Select>
                   </FormControl>
                 </Grid>
@@ -509,11 +565,11 @@ const ModelDetail = () => {
                     <InputLabel id="sort-select-label">مرتب‌سازی</InputLabel>
                     <Select
                       labelId="sort-select-label"
-                      value={sortBy}
+                      value={filters.sort}
                       label="مرتب‌سازی"
-                      onChange={(e) => setSortBy(e.target.value)}
+                      onChange={(e) => handleFilterChange('sort', e.target.value)}
                     >
-                      <MenuItem value="popular">محبوب‌ترین</MenuItem>
+                      <MenuItem value="featured">پیش‌فرض</MenuItem>
                       <MenuItem value="price-low">قیمت: کم به زیاد</MenuItem>
                       <MenuItem value="price-high">قیمت: زیاد به کم</MenuItem>
                       <MenuItem value="rating">بیشترین امتیاز</MenuItem>
@@ -525,7 +581,15 @@ const ModelDetail = () => {
                   <Button 
                     variant="outlined" 
                     color="secondary" 
-                    onClick={handleClearFilters}
+                    onClick={() => {
+                      setFilters({
+                        category: '',
+                        priceRange: 'all',
+                        availability: 'all',
+                        sort: 'featured'
+                      });
+                      setPagination(prev => ({ ...prev, page: 1 }));
+                    }}
                     fullWidth
                     startIcon={<FilterIcon />}
                     sx={{ direction: 'rtl' }}
@@ -555,15 +619,15 @@ const ModelDetail = () => {
                   قطعات یدکی برای {model.name}
                 </Typography>
                 <Chip 
-                  label={`${sortedParts.length} قطعه`} 
+                  label={`${products.length} قطعه`} 
                   color="primary" 
                   variant="outlined" 
                 />
               </Paper>
               
               <Grid container spacing={3}>
-                {sortedParts.map((part) => (
-                  <Grid item key={part.id} xs={12} sm={6} md={4}>
+                {products.map((part) => (
+                  <Grid item key={part._id} xs={12} sm={6} md={4}>
                     <Card
                       sx={{
                         height: '100%',
@@ -575,9 +639,10 @@ const ModelDetail = () => {
                           transform: 'translateY(-5px)',
                           boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
                         },
+                        position: 'relative',
                       }}
                     >
-                      {part.discount > 0 && (
+                      {part.discountPrice && (
                         <Box
                           sx={{
                             position: 'absolute',
@@ -595,14 +660,14 @@ const ModelDetail = () => {
                             zIndex: 1,
                           }}
                         >
-                          {part.discount}%
+                          {Math.round(((part.price - part.discountPrice) / part.price) * 100)}%
                         </Box>
                       )}
                       
                       <CardMedia
                         component="img"
                         height="160"
-                        image={part.image}
+                        image={part.images?.[0]?.url || '/images/products/default-product.jpg'}
                         alt={part.name}
                         sx={{ objectFit: 'contain', p: 2 }}
                       />
@@ -612,29 +677,55 @@ const ModelDetail = () => {
                           {part.name}
                         </Typography>
                         
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          {part.description}
+                        </Typography>
+                        
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                           <Chip 
-                            label={part.category} 
+                            label={part.category?.name || 'عمومی'} 
                             size="small" 
                             color="primary"
                             variant="outlined"
                           />
                           <Chip 
-                            label={part.isOriginal ? 'اورجینال' : 'غیر اورجینال'} 
+                            label={part.stock > 0 ? 'موجود' : 'ناموجود'} 
                             size="small" 
-                            color={part.isOriginal ? 'success' : 'default'}
+                            color={part.stock > 0 ? 'success' : 'error'}
                             variant="outlined"
                           />
                         </Box>
+                        
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          برند: {part.brand?.name || 'نامشخص'}
+                        </Typography>
+                        
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          کد محصول: {part.sku}
+                        </Typography>
                         
                         <Divider sx={{ my: 1.5 }} />
                         
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              برند: {part.brand}
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                            {part.discountPrice ? (
+                              <>
+                                <Typography 
+                                  variant="body2" 
+                                  color="text.secondary"
+                                  sx={{ textDecoration: 'line-through' }}
+                                >
+                                  {part.price.toLocaleString()} تومان
+                                </Typography>
+                                <Typography 
+                                  variant="h6" 
+                                  color="error" 
+                                  sx={{ fontWeight: 'bold' }}
+                                >
+                                  {part.discountPrice.toLocaleString()} تومان
+                                </Typography>
+                              </>
+                            ) : (
                               <Typography 
                                 variant="h6" 
                                 color="primary" 
@@ -642,15 +733,25 @@ const ModelDetail = () => {
                               >
                                 {part.price.toLocaleString()} تومان
                               </Typography>
-                            </Box>
+                            )}
+                            
+                            {part.rating && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                  ⭐ {part.rating} ({part.numReviews} نظر)
+                                </Typography>
+                              </Box>
+                            )}
                           </Box>
                           
                           <Button 
                             variant="contained" 
                             color="primary"
                             size="small"
+                            disabled={part.stock === 0}
+                            onClick={() => navigate('/contact-us')}
                           >
-                            افزودن به سبد
+                            {part.stock > 0 ? 'استعلام محصول' : 'ناموجود'}
                           </Button>
                         </Box>
                       </CardContent>
@@ -659,7 +760,16 @@ const ModelDetail = () => {
                 ))}
               </Grid>
               
-              {sortedParts.length === 0 && (
+              {productsLoading && (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <CircularProgress />
+                  <Typography variant="body2" sx={{ mt: 2 }}>
+                    در حال بارگذاری قطعات...
+                  </Typography>
+                </Box>
+              )}
+              
+              {products.length === 0 && !productsLoading && (
                 <Paper
                   sx={{
                     textAlign: 'center',
@@ -671,6 +781,9 @@ const ModelDetail = () => {
                   <Typography variant="h6" color="text.secondary">
                     هیچ قطعه‌ای با فیلترهای انتخاب شده یافت نشد
                   </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    لطفاً فیلترهای مختلفی را امتحان کنید یا همه فیلترها را حذف کنید
+                  </Typography>
                 </Paper>
               )}
             </Box>
@@ -678,7 +791,7 @@ const ModelDetail = () => {
         )}
         
         {/* Specifications Tab */}
-        {currentTab === 1 && (
+        {tabValue === 1 && (
           <Paper elevation={1} sx={{ p: 3, borderRadius: 2, direction: 'rtl' }}>
             <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
               مشخصات فنی {model.name}
@@ -711,7 +824,7 @@ const ModelDetail = () => {
         )}
         
         {/* Common Issues Tab */}
-        {currentTab === 2 && (
+        {tabValue === 2 && (
           <Paper elevation={1} sx={{ p: 3, borderRadius: 2, direction: 'rtl' }}>
             <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
               مشکلات رایج {model.name}
@@ -757,6 +870,21 @@ const ModelDetail = () => {
           </Paper>
         )}
       </Box>
+
+      {/* Pagination */}
+      {pagination.pages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Pagination
+            count={pagination.pages}
+            page={pagination.page}
+            onChange={handlePageChange}
+            color="primary"
+            size="large"
+            showFirstButton
+            showLastButton
+          />
+        </Box>
+      )}
     </Container>
   );
 };

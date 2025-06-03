@@ -5,44 +5,44 @@ const eventSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    index: true
+    index: true,
   },
   eventType: {
     type: String,
     enum: ['view', 'add_to_cart', 'purchase', 'search'],
     required: true,
-    index: true
+    index: true,
   },
   productId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
-    index: true
+    index: true,
   },
   searchQuery: {
     type: String,
-    sparse: true
+    sparse: true,
   },
   categoryId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',
-    sparse: true
+    sparse: true,
   },
   timestamp: {
     type: Date,
     default: Date.now,
-    index: true
+    index: true,
   },
   referrer: String,
   sessionId: {
     type: String,
-    index: true
+    index: true,
   },
   metadata: {
     type: Object,
-    default: {}
-  }
+    default: {},
+  },
 }, {
-  timestamps: true
+  timestamps: true,
 });
 
 // Compound indexes for efficient querying
@@ -51,4 +51,4 @@ eventSchema.index({ productId: 1, eventType: 1, timestamp: -1 });
 
 const Event = mongoose.model('Event', eventSchema);
 
-export default Event; 
+export default Event;

@@ -4,7 +4,7 @@ import { startMonitoring } from '../utils/db-monitor.js';
 
 /**
  * Connect to MongoDB with optimized connection settings
- * 
+ *
  * These settings are configured for optimal performance in production environments.
  * - maxPoolSize: Controls the maximum number of connections in the MongoDB connection pool
  * - minPoolSize: Sets the minimum number of connections maintained in the connection pool
@@ -15,7 +15,7 @@ import { startMonitoring } from '../utils/db-monitor.js';
  * - retryWrites: Automatically retry write operations on network errors
  * - w: Write concern level
  * - readPreference: Preferred read operations distribution
- * 
+ *
  * @returns {Promise<mongoose.Connection>} Mongoose connection object
  */
 export const connectDB = async () => {
@@ -29,7 +29,7 @@ export const connectDB = async () => {
       serverSelectionTimeoutMS: 15000,
       heartbeatFrequencyMS: 10000,
     };
-    
+
     // Use different settings for development vs production
     if (process.env.NODE_ENV === 'production') {
       // Optimized for production environments
@@ -48,7 +48,7 @@ export const connectDB = async () => {
 
     // Set default MongoDB URI if not provided
     const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/karno';
-    
+
     // Connect to MongoDB with optimized options
     const conn = await mongoose.connect(mongoUri, connectionOptions);
 
@@ -68,7 +68,7 @@ export const connectDB = async () => {
       logger.error({
         message: 'MongoDB connection error',
         error: err.message,
-        stack: err.stack
+        stack: err.stack,
       });
     });
 
@@ -88,7 +88,7 @@ export const connectDB = async () => {
     logger.error({
       message: 'Error connecting to MongoDB',
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
     process.exit(1);
   }
@@ -96,7 +96,7 @@ export const connectDB = async () => {
 
 /**
  * Close MongoDB connection gracefully
- * 
+ *
  * @returns {Promise<void>}
  */
 export const closeConnection = async () => {
@@ -107,7 +107,7 @@ export const closeConnection = async () => {
     logger.error({
       message: 'Error closing MongoDB connection',
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
   }
 };

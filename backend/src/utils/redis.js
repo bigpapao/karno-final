@@ -13,7 +13,7 @@ class RedisClient {
       logger.info('Redis is disabled by configuration');
       return;
     }
-    
+
     try {
       // Create Redis client with connection details from environment variables
       // or fallback to default values
@@ -21,11 +21,11 @@ class RedisClient {
         url: process.env.REDIS_URL || 'redis://localhost:6379',
         password: process.env.REDIS_PASSWORD,
         socket: {
-          reconnectStrategy: (retries) => {
+          reconnectStrategy: (retries) =>
             // Exponential backoff with a maximum of 10 seconds
-            return Math.min(Math.pow(2, retries) * 100, 10000);
-          }
-        }
+            Math.min(2 ** retries * 100, 10000),
+
+        },
       });
 
       // Register event handlers
@@ -33,7 +33,7 @@ class RedisClient {
         this.ready = false;
         logger.error({
           message: 'Redis client error',
-          error: error.message
+          error: error.message,
         });
       });
 
@@ -62,7 +62,7 @@ class RedisClient {
       logger.error({
         message: 'Failed to connect to Redis',
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
     }
   }
@@ -82,13 +82,13 @@ class RedisClient {
 
     try {
       return await this.client.set(key, value, {
-        [flag.toLowerCase()]: expiry
+        [flag.toLowerCase()]: expiry,
       });
     } catch (error) {
       logger.error({
         message: 'Redis set error',
         error: error.message,
-        key
+        key,
       });
       return 'ERROR';
     }
@@ -110,7 +110,7 @@ class RedisClient {
       logger.error({
         message: 'Redis get error',
         error: error.message,
-        key
+        key,
       });
       return null;
     }
@@ -136,7 +136,7 @@ class RedisClient {
       logger.error({
         message: 'Redis del error',
         error: error.message,
-        keys: Array.isArray(keys) ? keys.length : keys
+        keys: Array.isArray(keys) ? keys.length : keys,
       });
       return 0;
     }
@@ -158,7 +158,7 @@ class RedisClient {
       logger.error({
         message: 'Redis keys error',
         error: error.message,
-        pattern
+        pattern,
       });
       return [];
     }
@@ -180,7 +180,7 @@ class RedisClient {
       logger.error({
         message: 'Redis exists error',
         error: error.message,
-        key
+        key,
       });
       return false;
     }
@@ -204,7 +204,7 @@ class RedisClient {
         message: 'Redis expire error',
         error: error.message,
         key,
-        seconds
+        seconds,
       });
       return 0;
     }
@@ -224,7 +224,7 @@ class RedisClient {
     } catch (error) {
       logger.error({
         message: 'Redis flushAll error',
-        error: error.message
+        error: error.message,
       });
       return 'ERROR';
     }
@@ -242,7 +242,7 @@ class RedisClient {
       } catch (error) {
         logger.error({
           message: 'Error closing Redis connection',
-          error: error.message
+          error: error.message,
         });
       }
     }
@@ -257,4 +257,4 @@ const redisClient = new RedisClient();
   await redisClient.connect();
 })();
 
-export default redisClient; 
+export default redisClient;

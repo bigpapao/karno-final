@@ -1,3 +1,4 @@
+// controllers/auth.profile.controller.js (Optimized)
 import crypto from 'crypto';
 import User from '../models/user.model.js';
 import { AppError } from '../middleware/error-handler.middleware.js';
@@ -13,11 +14,7 @@ import { sendEmail } from '../utils/email.js';
 // @access  Private
 export const getProfile = async (req, res, next) => {
   try {
-    // User is already attached to req from auth middleware
-    res.status(200).json({
-      status: 'success',
-      data: req.user,
-    });
+    res.status(200).json({ status: 'success', data: req.user });
   } catch (error) {
     next(error);
   }
@@ -31,63 +28,31 @@ export const updateProfile = async (req, res, next) => {
     const {
       firstName, lastName, email, address, password, phone,
     } = req.body;
+    const user = req.user || (await User.findOne({ phone }));
 
-    // Get user from auth middleware or find by phone (for password setup)
-    let user;
-    if (req.user) {
-      user = await User.findById(req.user.id);
-    } else if (phone) {
-      // This path is used for setting password after phone verification
-      user = await User.findOne({ phone });
-    }
+    if (!user) return next(new AppError('User not found', 404));
 
-    if (!user) {
-      return next(new AppError('User not found', 404));
-    }
-
-    // Update basic info
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
 
-    // Update email if provided and different
     if (email && email !== user.email) {
-      // Check if email already exists for another user
-      const existingUser = await User.findOne({ email, _id: { $ne: user._id } });
-      if (existingUser) {
-        return next(new AppError('Email already in use by another account', 400));
-      }
-
+      const existing = await User.findOne({ email, _id: { $ne: user._id } });
+      if (existing) return next(new AppError('Email already in use', 400));
       user.email = email;
-      user.isEmailVerified = false; // Reset email verification
+      user.isEmailVerified = false;
     }
 
-    // Update password if provided
     if (password) {
-      if (password.length < 6) {
-        return next(new AppError('Password must be at least 6 characters', 400));
-      }
+      if (password.length < 6) return next(new AppError('Password too short', 400));
       user.password = password;
     }
 
-    // Update address if provided
-    if (address) {
-      user.address = {
-        ...user.address,
-        ...address,
-      };
-    }
+    if (address) user.address = { ...user.address, ...address };
 
     await user.save({ validateBeforeSave: true });
-
-    // Remove sensitive fields
     user.password = undefined;
 
-    res.status(200).json({
-      status: 'success',
-      data: {
-        user,
-      },
-    });
+    res.status(200).json({ status: 'success', data: { user } });
   } catch (error) {
     next(error);
   }
@@ -99,48 +64,26 @@ export const updateProfile = async (req, res, next) => {
 export const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
-
-    // Get user by email
     const user = await User.findOne({ email });
-    if (!user) {
-      return next(new AppError('There is no user with that email address', 404));
-    }
+    if (!user) return next(new AppError('No user with this email', 404));
 
-    // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    user.resetPasswordToken = crypto
-      .createHash('sha256')
-      .update(resetToken)
-      .digest('hex');
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
 
     await user.save({ validateBeforeSave: false });
 
-    // Use a fixed frontend URL for development. In production, use an environment variable.
-    const frontendBaseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const resetURL = `${frontendBaseUrl}/reset-password/${resetToken}`;
-
-    const message = `Forgot your password? Click the link to reset your password: ${resetURL}
-This link is valid for 10 minutes.
-If you didn\'t forget your password, please ignore this email!`;
+    const resetURL = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+    const message = `Click to reset: ${resetURL}\nValid for 10 minutes.`;
 
     try {
-      await sendEmail({
-        email: user.email,
-        subject: 'Your password reset token (valid for 10 minutes)',
-        html: message,
-      });
-
-      res.status(200).json({
-        status: 'success',
-        message: 'Token sent to email',
-      });
-    } catch (error) {
+      await sendEmail({ email: user.email, subject: 'Reset Token', html: message });
+      res.status(200).json({ status: 'success', message: 'Token sent to email' });
+    } catch (err) {
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
       await user.save({ validateBeforeSave: false });
-
-      return next(new AppError('There was an error sending the email. Try again later!', 500));
+      return next(new AppError('Email failed to send', 500));
     }
   } catch (error) {
     next(error);
@@ -153,39 +96,24 @@ If you didn\'t forget your password, please ignore this email!`;
 export const resetPassword = async (req, res, next) => {
   try {
     const { token, password } = req.body;
+    const hashed = crypto.createHash('sha256').update(token).digest('hex');
 
-    // Hash token
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(token)
-      .digest('hex');
-
-    // Find user by token
     const user = await User.findOne({
-      resetPasswordToken: hashedToken,
+      resetPasswordToken: hashed,
       resetPasswordExpire: { $gt: Date.now() },
     });
+    if (!user) return next(new AppError('Invalid or expired token', 400));
 
-    if (!user) {
-      return next(new AppError('Token is invalid or has expired', 400));
-    }
-
-    // Update password
     user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
 
-    // Generate tokens and set cookies
     const accessToken = generateAccessToken(user);
-    const refreshTokenToSet = generateRefreshToken(user); // Renamed to avoid conflict
-    setTokenCookies(res, accessToken, refreshTokenToSet);
+    const refreshToken = generateRefreshToken(user);
+    setTokenCookies(res, accessToken, refreshToken);
 
-    res.status(200).json({
-      status: 'success',
-      token: accessToken,
-      user,
-    });
+    res.status(200).json({ status: 'success', token: accessToken, user });
   } catch (error) {
     next(error);
   }

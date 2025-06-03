@@ -1,6 +1,6 @@
 /**
  * Security Routes for Admin
- * 
+ *
  * These routes provide security monitoring and management capabilities
  * for administrators.
  */
@@ -12,7 +12,7 @@ import {
   getSuspiciousIPs,
   blockIP,
   unblockIP,
-  clearSuspiciousIPs
+  clearSuspiciousIPs,
 } from '../../middleware/security-monitor.middleware.js';
 import { logger } from '../../utils/logger.js';
 import { ApiError, ErrorCodes } from '../../utils/api-error.js';
@@ -32,11 +32,11 @@ router.use(authorize('admin'));
 router.get('/events', asyncHandler(async (req, res, next) => {
   const { limit = 100 } = req.query;
   const events = getSecurityEvents(parseInt(limit, 10));
-  
+
   res.status(200).json({
     status: 'success',
     results: events.length,
-    data: events
+    data: events,
   });
 }));
 
@@ -47,11 +47,11 @@ router.get('/events', asyncHandler(async (req, res, next) => {
  */
 router.get('/suspicious-ips', asyncHandler(async (req, res, next) => {
   const ips = getSuspiciousIPs();
-  
+
   res.status(200).json({
     status: 'success',
     results: ips.length,
-    data: ips
+    data: ips,
   });
 }));
 
@@ -62,22 +62,22 @@ router.get('/suspicious-ips', asyncHandler(async (req, res, next) => {
  */
 router.post('/block-ip', asyncHandler(async (req, res, next) => {
   const { ip } = req.body;
-  
+
   if (!ip) {
     return next(new ApiError(400, 'IP address is required', ErrorCodes.BAD_REQUEST));
   }
-  
+
   blockIP(ip);
-  
+
   logger.info({
     message: 'IP address blocked by admin',
     ip,
-    adminId: req.user._id
+    adminId: req.user._id,
   });
-  
+
   res.status(200).json({
     status: 'success',
-    message: `IP address ${ip} has been blocked`
+    message: `IP address ${ip} has been blocked`,
   });
 }));
 
@@ -88,22 +88,22 @@ router.post('/block-ip', asyncHandler(async (req, res, next) => {
  */
 router.post('/unblock-ip', asyncHandler(async (req, res, next) => {
   const { ip } = req.body;
-  
+
   if (!ip) {
     return next(new ApiError(400, 'IP address is required', ErrorCodes.BAD_REQUEST));
   }
-  
+
   unblockIP(ip);
-  
+
   logger.info({
     message: 'IP address unblocked by admin',
     ip,
-    adminId: req.user._id
+    adminId: req.user._id,
   });
-  
+
   res.status(200).json({
     status: 'success',
-    message: `IP address ${ip} has been unblocked`
+    message: `IP address ${ip} has been unblocked`,
   });
 }));
 
@@ -114,15 +114,15 @@ router.post('/unblock-ip', asyncHandler(async (req, res, next) => {
  */
 router.post('/clear-suspicious', asyncHandler(async (req, res, next) => {
   clearSuspiciousIPs();
-  
+
   logger.info({
     message: 'Suspicious IP list cleared by admin',
-    adminId: req.user._id
+    adminId: req.user._id,
   });
-  
+
   res.status(200).json({
     status: 'success',
-    message: 'Suspicious IP list has been cleared'
+    message: 'Suspicious IP list has been cleared',
   });
 }));
 
@@ -236,7 +236,7 @@ router.post('/test-csrf-endpoint', asyncHandler(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     message: 'CSRF test endpoint accessed successfully',
-    receivedData: req.body
+    receivedData: req.body,
   });
 }));
 
@@ -247,7 +247,7 @@ router.post('/test-csrf-endpoint', asyncHandler(async (req, res, next) => {
  */
 router.get('/test-xss', asyncHandler(async (req, res, next) => {
   const { input } = req.query;
-  
+
   // Build the HTML response without template literals to avoid syntax issues
   let html = `
     <!DOCTYPE html>
@@ -272,14 +272,14 @@ router.get('/test-xss', asyncHandler(async (req, res, next) => {
           <input type="text" name="input" value="${input || ''}" placeholder="Enter test string">
           <button type="submit">Test</button>
         </form>`;
-        
+
   // Conditionally add output section
   if (input) {
     html += `
         <h3>Output (should be sanitized):</h3>
         <div class="output">${input}</div>`;
   }
-  
+
   // Close the first section and add the rest
   html += `
       </div>
@@ -295,7 +295,7 @@ router.get('/test-xss', asyncHandler(async (req, res, next) => {
       </div>
     </body>
     </html>`;
-  
+
   res.send(html);
 }));
 

@@ -25,7 +25,7 @@ export const generateAccessToken = (user) => {
 export const generateRefreshToken = (user) => {
   // Safely handle passwordChangedAt field - wrap date safely
   const issuedAt = new Date(user.passwordChangedAt || Date.now()).getTime();
-  
+
   const payload = {
     id: user._id,
     version: issuedAt,
@@ -47,34 +47,37 @@ export const setTokenCookies = (res, accessToken, refreshToken) => {
   // Calculate cookie expiry dates
   const accessExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
   const refreshExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-  
+
   res.cookie('access_token', accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Set to false for localhost development
     sameSite: 'lax',
     expires: accessExpiry,
     path: '/',
   });
-  
+
   res.cookie('refresh_token', refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Set to false for localhost development
     sameSite: 'lax',
     expires: refreshExpiry,
     path: '/',
   });
 };
 
-// Clear auth cookies
+// Clear tokens from cookies
 export const clearTokenCookies = (res) => {
-  res.cookie('access_token', '', { 
-    httpOnly: true, 
-    expires: new Date(0),
+  res.clearCookie('access_token', {
+    httpOnly: true,
+    secure: false, // Set to false for localhost development
+    sameSite: 'lax',
     path: '/',
   });
-  res.cookie('refresh_token', '', { 
-    httpOnly: true, 
-    expires: new Date(0),
+
+  res.clearCookie('refresh_token', {
+    httpOnly: true,
+    secure: false, // Set to false for localhost development
+    sameSite: 'lax',
     path: '/',
   });
 };

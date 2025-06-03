@@ -16,7 +16,7 @@ export const sendEmail = async (options) => {
       defaults: {
         charset: 'UTF-8',
         encoding: 'quoted-printable',
-      }
+      },
     });
 
     // Define email options
@@ -28,7 +28,7 @@ export const sendEmail = async (options) => {
       // Add UTF-8 headers for Persian text
       headers: {
         'Content-Type': 'text/html; charset=UTF-8',
-      }
+      },
     };
 
     // Send email

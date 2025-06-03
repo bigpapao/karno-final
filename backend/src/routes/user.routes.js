@@ -1,14 +1,13 @@
 import express from 'express';
 import {
   getUsers, getUserById, updateUser, deleteUser,
-} from '../controllers/user.controller.js';
-import { authenticate, authorize } from '../middleware/auth.middleware.js';
-import {
+
   updateProfile,
   getProfileStatus,
   requestPhoneVerification,
-  verifyPhoneVerification
+  verifyPhoneVerification,
 } from '../controllers/user.controller.js';
+import { authenticate, authorize } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 

@@ -73,4 +73,4 @@ export const optionalAuth = async (req, res, next) => {
     // Ignore token errors and continue
     next();
   }
-}; 
+};

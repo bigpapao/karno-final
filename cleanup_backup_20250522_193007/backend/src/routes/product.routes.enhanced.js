@@ -1,9 +1,9 @@
 /**
  * Enhanced Product Routes (ACTIVE ROUTES)
- * 
+ *
  * IMPORTANT: This is the current active product routes file used in the application.
  * The original product.routes.js file has been removed.
- * 
+ *
  * This file defines all routes related to products, including enhanced search functionality.
  */
 
@@ -22,7 +22,7 @@ import {
   searchByVehicle,
   getVehicleMakes,
   getVehicleModels,
-  getVehicleYears
+  getVehicleYears,
 } from '../controllers/product.controller.enhanced.js';
 import {
   getProductAnalytics,
@@ -69,4 +69,4 @@ router.get('/analytics/stats', getProductAnalytics);
 router.put('/bulk-stock-update', bulkUpdateProductStock);
 router.put('/:id/stock', updateProductStock);
 
-export default router; 
+export default router;

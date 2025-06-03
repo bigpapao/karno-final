@@ -28,4 +28,4 @@ export const paginationMiddleware = (req, res, next) => {
   };
 
   next();
-}; 
+};

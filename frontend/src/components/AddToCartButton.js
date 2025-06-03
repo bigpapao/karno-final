@@ -29,6 +29,9 @@ const AddToCartButton = ({
   const { trackAddToCart } = useTracking();
   const [snackbarOpen, setSnackbarOpen] = React.useState(false);
 
+  const CART_ENABLED = String(process.env.REACT_APP_CART_ENABLED).toLowerCase() === 'true';
+  if (!CART_ENABLED) return null;
+
   const handleAddToCart = () => {
     const added = addToCart(
       product, 
